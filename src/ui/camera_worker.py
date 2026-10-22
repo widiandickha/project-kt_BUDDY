@@ -213,6 +213,101 @@ class CameraWorker(QThread):
             "pose_detected": True,
         }
 
+    def _draw_buddy_on_head(self, frame_bgr: np.ndarray, x1: int, y1: int, x2: int, expression: str = "istirahat") -> None:
+        """Menggambar karakter kucing Virtual Buddy lucu di atas kepala pengguna."""
+        h, w = frame_bgr.shape[:2]
+        face_cx = int((x1 + x2) * 0.5)
+        box_w = max(40, x2 - x1)
+        cat_size = int(max(36, min(80, box_w * 0.38)))
+
+        # Posisikan kucing tepat di atas batas atas kepala (y1)
+        cat_cx = face_cx
+        cat_cy = y1 - int(cat_size * 0.65)
+        if cat_cy - cat_size < 10:
+            cat_cy = max(cat_size, y1 + 10)
+
+        # Warna kucing (oranye hangat, telinga krem, outline batu)
+        fur = (54, 119, 217)       # BGR untuk #D97736
+        inner_ear = (168, 198, 243) # BGR untuk #F3C6A8
+        dark = (23, 25, 28)        # BGR untuk #1C1917
+        muzzle = (235, 243, 250)   # BGR untuk #FAF3EB
+
+        r = cat_size // 2
+
+        # Telinga kucing
+        ear_h = int(r * 0.75)
+        pts_l = np.array([
+            [cat_cx - int(r * 0.8), cat_cy - int(r * 0.2)],
+            [cat_cx - int(r * 0.9), cat_cy - r - ear_h],
+            [cat_cx - int(r * 0.2), cat_cy - int(r * 0.7)]
+        ], np.int32)
+        cv2.fillPoly(frame_bgr, [pts_l], fur)
+        cv2.polylines(frame_bgr, [pts_l], True, dark, 2)
+
+        pts_r = np.array([
+            [cat_cx + int(r * 0.8), cat_cy - int(r * 0.2)],
+            [cat_cx + int(r * 0.9), cat_cy - r - ear_h],
+            [cat_cx + int(r * 0.2), cat_cy - int(r * 0.7)]
+        ], np.int32)
+        cv2.fillPoly(frame_bgr, [pts_r], fur)
+        cv2.polylines(frame_bgr, [pts_r], True, dark, 2)
+
+        # Telinga dalam (pinkish/krem)
+        in_l = np.array([
+            [cat_cx - int(r * 0.7), cat_cy - int(r * 0.3)],
+            [cat_cx - int(r * 0.8), cat_cy - r - int(ear_h * 0.6)],
+            [cat_cx - int(r * 0.3), cat_cy - int(r * 0.6)]
+        ], np.int32)
+        cv2.fillPoly(frame_bgr, [in_l], inner_ear)
+
+        in_r = np.array([
+            [cat_cx + int(r * 0.7), cat_cy - int(r * 0.3)],
+            [cat_cx + int(r * 0.8), cat_cy - r - int(ear_h * 0.6)],
+            [cat_cx + int(r * 0.3), cat_cy - int(r * 0.6)]
+        ], np.int32)
+        cv2.fillPoly(frame_bgr, [in_r], inner_ear)
+
+        # Kepala bulat kucing
+        cv2.circle(frame_bgr, (cat_cx, cat_cy), r, fur, -1)
+        cv2.circle(frame_bgr, (cat_cx, cat_cy), r, dark, 2)
+
+        # Moncong putih
+        cv2.ellipse(frame_bgr, (cat_cx, cat_cy + int(r * 0.25)), (int(r * 0.42), int(r * 0.28)), 0, 0, 360, muzzle, -1)
+        cv2.ellipse(frame_bgr, (cat_cx, cat_cy + int(r * 0.25)), (int(r * 0.42), int(r * 0.28)), 0, 0, 360, dark, 1)
+
+        # Hidung segitiga kecil
+        pts_nose = np.array([
+            [cat_cx - 3, cat_cy + int(r * 0.15)],
+            [cat_cx + 3, cat_cy + int(r * 0.15)],
+            [cat_cx, cat_cy + int(r * 0.25)]
+        ], np.int32)
+        cv2.fillPoly(frame_bgr, [pts_nose], (18, 52, 154)) # BGR terakota
+
+        # Mata kucing berdasarkan ekspresi
+        eye_y = cat_cy - int(r * 0.12)
+        eye_lx = cat_cx - int(r * 0.35)
+        eye_rx = cat_cx + int(r * 0.35)
+
+        if expression == "menguap":
+            # Mata menyipit mengantuk (garis melengkung)
+            cv2.ellipse(frame_bgr, (eye_lx, eye_y), (4, 3), 0, 180, 360, dark, 2)
+            cv2.ellipse(frame_bgr, (eye_rx, eye_y), (4, 3), 0, 180, 360, dark, 2)
+            # Mulut menguap bulat merah
+            cv2.circle(frame_bgr, (cat_cx, cat_cy + int(r * 0.42)), 4, (27, 27, 153), -1)
+        else:
+            # Mata ceria (titik bulat dengan kilau putih)
+            cv2.circle(frame_bgr, (eye_lx, eye_y), max(2, int(r * 0.14)), dark, -1)
+            cv2.circle(frame_bgr, (eye_rx, eye_y), max(2, int(r * 0.14)), dark, -1)
+            cv2.circle(frame_bgr, (eye_lx - 1, eye_y - 1), 1, (255, 255, 255), -1)
+            cv2.circle(frame_bgr, (eye_rx - 1, eye_y - 1), 1, (255, 255, 255), -1)
+
+        # Kumis kecil kiri dan kanan
+        whisker_y = cat_cy + int(r * 0.25)
+        cv2.line(frame_bgr, (cat_cx - int(r * 0.8), whisker_y - 2), (cat_cx - int(r * 0.4), whisker_y), dark, 1)
+        cv2.line(frame_bgr, (cat_cx - int(r * 0.8), whisker_y + 4), (cat_cx - int(r * 0.4), whisker_y + 2), dark, 1)
+        cv2.line(frame_bgr, (cat_cx + int(r * 0.4), whisker_y), (cat_cx + int(r * 0.8), whisker_y - 2), dark, 1)
+        cv2.line(frame_bgr, (cat_cx + int(r * 0.4), whisker_y + 2), (cat_cx + int(r * 0.8), whisker_y + 4), dark, 1)
+
     def run(self) -> None:
         self._running = True
         cam_cfg = self._config.get("camera", {})
@@ -309,6 +404,9 @@ class CameraWorker(QThread):
                 if lm.bbox is not None:
                     x1, y1, x2, y2 = lm.bbox
                     cv2.rectangle(frame_bgr, (x1, y1), (x2, y2), (22, 101, 52), 2)
+                    # Gambar ikon kucing Virtual Buddy lucu tepat di atas kepala
+                    cat_expr = "menguap" if yolo_yawn or mar > 0.48 else ("istirahat" if ear < 0.20 else "minum")
+                    self._draw_buddy_on_head(frame_bgr, x1, y1, x2, expression=cat_expr)
 
             if self.calibrator.is_calibrating:
                 just_done = self.calibrator.add_sample(
