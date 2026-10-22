@@ -1,0 +1,26 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Datasets (ukuran besar)
+1. MRL DATASET/
+3. NTHU DDD/
+2. UTA RLDD/
+datasets/
+data/*.db
+data/*.sqlite3
+
+# Models & Weights besar (unduh via script atau runtime)
+models/*.pt
+models/*.onnx
+runs/
+*.pt
+
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
