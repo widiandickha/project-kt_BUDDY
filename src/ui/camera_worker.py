@@ -384,6 +384,9 @@ class CameraWorker(QThread):
                     continue
                 consecutive_failures = 0
 
+                # Flip horizontal agar tampilan kamera natural seperti cermin (mirror preview)
+                frame_bgr = cv2.flip(frame_bgr, 1)
+
                 lm = landmark_analyzer.analyze(frame_bgr)
                 pose = pose_analyzer.analyze(frame_bgr)
                 yolo_res = face_yolo.detect(frame_bgr)

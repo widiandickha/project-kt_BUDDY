@@ -29,7 +29,7 @@ class BuddyOverlayWindow(QWidget):
             | Qt.Tool
         )
         self.setAttribute(Qt.WA_ShowWithoutActivating, False)
-        self.setFixedWidth(410)
+        self.setFixedWidth(520)
 
         self._current_log_id: int = -1
         self._remaining_sec: int = 8
@@ -56,10 +56,10 @@ class BuddyOverlayWindow(QWidget):
         top_row.setSpacing(14)
 
         self.cat_widget = CatBuddyWidget(expression="istirahat", size=92, parent=self.card)
-        top_row.addWidget(self.cat_widget, alignment=Qt.AlignTop)
+        top_row.addWidget(self.cat_widget, alignment=Qt.AlignVCenter)
 
         text_col = QVBoxLayout()
-        text_col.setSpacing(4)
+        text_col.setSpacing(6)
 
         self.lbl_badge = QLabel("Kucing Teman Kerja", self.card)
         self.lbl_badge.setObjectName("MutedText")
@@ -72,6 +72,7 @@ class BuddyOverlayWindow(QWidget):
 
         self.lbl_message = QLabel("", self.card)
         self.lbl_message.setWordWrap(True)
+        self.lbl_message.setStyleSheet("line-height: 1.4; font-size: 13px;")
         text_col.addWidget(self.lbl_message)
 
         self.lbl_reason = QLabel("", self.card)
@@ -83,7 +84,8 @@ class BuddyOverlayWindow(QWidget):
         card_layout.addLayout(top_row)
 
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
+        btn_row.setSpacing(10)
+        btn_row.setContentsMargins(0, 6, 0, 0)
 
         self.lbl_countdown = QLabel("Menutup otomatis dalam 8 dtk", self.card)
         self.lbl_countdown.setObjectName("MutedText")
