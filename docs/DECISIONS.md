@@ -221,6 +221,16 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **8.6 Uji kegagalan:** checklist di `docs/eval/failure_tests.md`. Uji yang butuh perangkat atau manusia (1 jam webcam asli, multi-monitor, DPI, masker) diisi oleh pengguna.
 - **Belum bisa diisi tanpa partisipan atau model:** akurasi model per kelas, robustness YOLO, akurasi event dari sesi nyata, korelasi kuesioner (≥ 10 partisipan), dan UX.
 
+## FASE 9
+
+### D-026 · Aset laporan
+- **`scripts/make_report_assets.py`:**
+  - Selalu membuat diagram arsitektur, alur fase, lembar 12 ekspresi Buddy, dan timeline skor dari replay sampel sintetis.
+  - Membuat grafik metrik model, akurasi event, performa, korelasi kuesioner, dan UX hanya bila file hasilnya ada.
+  - `docs/report_assets/README.md` mencatat grafik mana yang masih menunggu data.
+- **`docs/LAPORAN.md`:** memetakan setiap bab laporan ke file di repo, dan berisi keterbatasan, etika & privasi, serta skenario demo 5 menit (termasuk cadangan tanpa webcam).
+- **Video demo:** tidak dibuat di repo, karena harus direkam pengguna dan tanpa wajah orang lain tanpa izin.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

@@ -189,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     summary = ux_analysis(pd.read_csv(args.likert))
     follow = advice_follow(parse_dbs(args.db)) if args.db else []
     write_ux_report(summary, follow, eval_dir / "ux.md")
+    summary.to_csv(eval_dir / "ux_summary.csv", index=False)
     print(summary.to_string(index=False))
     return 0
 
