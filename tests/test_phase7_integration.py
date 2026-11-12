@@ -23,6 +23,7 @@ CFG = load_config()
 FAST = copy.deepcopy(CFG)  # short windows so real-time tests stay quick
 FAST["score"]["min_window_sec"] = 1
 FAST["habit"]["away_after_sec"] = 0.5
+FAST["inference"]["target_fps"] = 200  # do not cap test frames at 12 fps
 CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)
 
 
@@ -145,7 +146,7 @@ def test_inference_restarts_models_after_errors(tmp_path: Path, frames_dir: Path
         return Models(FakeEar(fail_times=6 if calls["n"] == 1 else 0), FakePose(), None)
 
     repo = Repository(Database(tmp_path / "f.db"))
-    p = Pipeline(CFG, repo, CAL, source=str(frames_dir), model_factory=flaky, source_fps=60)
+    p = Pipeline(FAST, repo, CAL, source=str(frames_dir), model_factory=flaky, source_fps=60)
     p.start()
     assert wait_for(lambda: p.inference.restarts >= 1 and p.inference.frames > 20)
     p.stop()
@@ -192,7 +193,7 @@ def test_app_starts_ticks_and_shuts_down_cleanly(qapp, tmp_path: Path, frames_di
     from src.main import DISCLAIMER_KEY, App, parse_args
 
     args = parse_args(["--source", str(frames_dir), "--skip-intro", "--db", str(tmp_path / "app.db"), "--source-fps", "60"])
-    app = App(qapp, CFG, args, model_factory=factory())
+    app = App(qapp, FAST, args, model_factory=factory())
     app.start()
     assert wait_for(lambda: app.pipeline.inference.frames > 30)
     for _ in range(3):

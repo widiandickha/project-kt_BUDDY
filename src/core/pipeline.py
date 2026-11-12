@@ -74,6 +74,7 @@ class InferenceThread(threading.Thread):
         self.model_factory = model_factory
         self.min_fps = float(rt["min_fps"])
         self.target_fps = float(cfg["inference"]["target_fps"])
+        self.min_interval = 1.0 / self.target_fps if self.target_fps > 0 else 0.0  # cap at target_fps
         self.max_pose_every, self.max_det_every = int(rt["max_pose_every"]), int(rt["max_det_every"])
         self.restart_after = int(rt["restart_after_errors"])
         self.performance_mode = bool(cfg["inference"]["performance_mode"])
@@ -122,6 +123,9 @@ class InferenceThread(threading.Thread):
             if self._paused.is_set():
                 self._stop_event.wait(0.2)
                 continue
+            wait = self.min_interval - (time.monotonic() - last)
+            if wait > 0:
+                self._stop_event.wait(wait)  # no need to exceed target_fps (saves CPU)
             frame = self.capture.get_latest(timeout=0.5)
             if frame is None:
                 continue

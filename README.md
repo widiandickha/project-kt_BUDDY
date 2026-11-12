@@ -17,7 +17,7 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 | 5 | Virtual Buddy (12 ekspresi, sprite player, state machine, saran, debug panel) | ✅ selesai |
 | 6 | Database, ringkasan harian, dashboard, ekspor CSV | ✅ selesai |
 | 7 | Integrasi (thread kamera/inferensi, tray, kalibrasi, pengaturan, `src.main`) | ✅ selesai |
-| 8 | Pengujian | – |
+| 8 | Pengujian (benchmark, akurasi event, kondisi, kuesioner, uji kegagalan) | ✅ tool selesai · ⏳ data partisipan |
 | 9 | Laporan & demo | – |
 
 ## Instalasi
@@ -127,6 +127,19 @@ Tanpa `models/best.pt`, mata/menguap/kerutan diambil dari landmark MediaPipe (D-
 
 Ganti sprite placeholder dengan menimpa `src/buddy/assets/cat/<ekspresi>.png` (PNG RGBA 512×512, kaki di bawah-tengah). Tidak perlu mengubah kode. Saran Buddy ada di `src/buddy/assets/advice_id.yaml`.
 
+### Pengujian (FASE 8)
+
+```bash
+.venv/bin/python scripts/benchmark_fps.py --pipeline --device cpu                 # FPS, latensi, CPU%, RAM -> docs/eval/performance.md
+.venv/bin/python scripts/scenario_session.py --peserta p01                        # sesi berskenario (dengan persetujuan)
+.venv/bin/python scripts/eval_events.py --features docs/eval/sesi/p01_features.jsonl --labels docs/eval/sesi/p01_labels.csv
+.venv/bin/python training/evaluate_robustness.py --method landmark --label-status final   # per kondisi
+.venv/bin/python scripts/analyze_questionnaire.py stress --ratings r.csv --db p01=data/p01.db
+.venv/bin/python scripts/analyze_questionnaire.py ux --likert likert.csv --db p01=data/p01.db
+```
+
+Template formulir ada di `docs/eval/templates/`, dan checklist uji kegagalan ada di `docs/eval/failure_tests.md`.
+
 ### Dashboard (FASE 6)
 
 ```bash
@@ -153,8 +166,9 @@ src/
   storage/             # db (migrasi, retensi, DbWriter), repository, daily_summary, demo_data
   ui/                  # dashboard, theme
   capture/
-training/              # common.py, split_dataset.py, augment.py, check_dataset.py, train.py, evaluate.py
-scripts/               # benchmark_fps.py, collect_data.py, import_public.py, preannotate.py
+training/              # common, split_dataset, augment, check_dataset, train, evaluate, evaluate_robustness
+scripts/               # benchmark_fps, collect_data, import_public, preannotate, generate_placeholder_sprites,
+                       # scenario_session, eval_events, analyze_questionnaire
 tests/
 legacy/                # prototipe lama (referensi, tidak dijalankan)
 ```

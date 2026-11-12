@@ -199,6 +199,28 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Opsi uji:** `--record-features` menyimpan FrameFeatures (angka saja) untuk replay dan uji event FASE 8. `--source` menerima file video atau folder gambar.
 - **Packaging PyInstaller:** opsional di spesifikasi dan belum dibuat.
 
+## FASE 8
+
+### D-025 · Tool pengujian dan batasan hasilnya
+- **8.1 Akurasi per kondisi** (`training/evaluate_robustness.py`) punya dua metode:
+  - `yolo`: mAP per kondisi, butuh `models/best.pt`.
+  - `landmark`: aturan EAR/MAR yang dipakai aplikasi tanpa YOLO.
+  - Kondisi diambil dari tag nama file. Dengan label draf, metode landmark melingkar (hasilnya 1,00), jadi hasilnya tidak disimpan ke repo.
+- **8.2 Akurasi event:**
+  - `scripts/scenario_session.py` memandu sesi berskenario (3× menguap, pejam lama, tangan ke dahi, plus bicara sebagai negatif) dan menulis label dari jadwal skrip.
+  - `scripts/eval_events.py` mencocokkan deteksi dengan label (±2 detik, satu-ke-satu).
+  - Deteksi memakai aturan yang sama dengan aplikasi.
+- **8.3 Performa:**
+  - `benchmark_fps.py --pipeline` mengukur stack aplikasi (MediaPipe + pose + YOLO bila ada).
+  - Inferensi kini dibatasi `inference.target_fps` (12), baik di aplikasi maupun di benchmark. Tanpa batas, CPU terbuang untuk FPS yang tidak dibutuhkan (131% vs 63% di mode CPU).
+  - Latensi event→bubble dilaporkan sebagai rata-rata dan maksimum, karena tick analisis 1 detik (spesifikasi 4.1) membuat kasus terburuknya di atas 1 detik.
+- **8.4 / 8.5 Kuesioner:**
+  - `scripts/analyze_questionnaire.py` menghitung Pearson dan Spearman dari skor sistem (rata-rata 30 menit sebelum pengisian) terhadap rating subjektif, per peserta dan gabungan.
+  - Skrip yang sama merangkum Likert UX dan rasio saran yang diikuti dari `advice_log`.
+  - Template CSV tersedia di `docs/eval/templates/`.
+- **8.6 Uji kegagalan:** checklist di `docs/eval/failure_tests.md`. Uji yang butuh perangkat atau manusia (1 jam webcam asli, multi-monitor, DPI, masker) diisi oleh pengguna.
+- **Belum bisa diisi tanpa partisipan atau model:** akurasi model per kelas, robustness YOLO, akurasi event dari sesi nyata, korelasi kuesioner (≥ 10 partisipan), dan UX.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

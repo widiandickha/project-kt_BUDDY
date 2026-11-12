@@ -142,3 +142,32 @@ class EarCalculator:
     def close(self) -> None:
         """Release native resources."""
         self._landmarker.close()
+
+
+class ImageLandmarker:
+    """FaceLandmarker in image mode (independent pictures: dataset tools, evaluation)."""
+
+    def __init__(self, model_path: Path) -> None:
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision
+
+        options = vision.FaceLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=str(model_path)),
+            running_mode=vision.RunningMode.IMAGE,
+            num_faces=1,
+        )
+        self._landmarker = vision.FaceLandmarker.create_from_options(options)
+
+    def points(self, bgr: np.ndarray) -> np.ndarray | None:
+        """Pixel landmarks (N, 2) of the first face, or None."""
+        import mediapipe as mp
+
+        h, w = bgr.shape[:2]
+        res = self._landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)))
+        if not res.face_landmarks:
+            return None
+        return np.array([[lm.x * w, lm.y * h] for lm in res.face_landmarks[0]], dtype=np.float32)
+
+    def close(self) -> None:
+        """Release native resources."""
+        self._landmarker.close()
