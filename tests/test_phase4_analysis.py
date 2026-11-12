@@ -281,3 +281,12 @@ def test_replay_sample_reaches_high_level_and_presence(tmp_path: Path) -> None:
     assert {"rendah", "sedang", "tinggi"} <= levels
     assert events == ["user_away", "user_returned"]
     assert max(r.stats.yawn_count for r in results) >= 3
+
+
+def test_monotonic_counters_for_event_logging() -> None:
+    win = SlidingWindow(CFG, 0.21)
+    t = feed(win, 0.0, 30.0, yawn=lambda t: 1.0 if t < 1.5 else 0.0, hand_to_forehead=lambda t: t % 10 < 2)
+    win.stats(t)
+    t = feed(win, t, 70.0)  # old samples leave the window, counters stay
+    win.stats(t)
+    assert win.total_yawns == 1 and win.total_hand_episodes == 3

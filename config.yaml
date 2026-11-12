@@ -77,7 +77,10 @@ buddy:
   mask_hz: 10
   fullscreen_poll_sec: 2
 
-storage: {db_path: data/stress_buddy.db, retention_days: 90, flush_sec: 10}
+storage: {db_path: data/stress_buddy.db, retention_days: 90, flush_sec: 10, log_every_sec: 10}
+
+# Ringkasan harian (FASE 6, D-023): health_score = 100 - avg_stres*stress_weight - penalti + bonus.
+health: {stress_weight: 0.5, no_break_penalty_per_hour: 5, posture_penalty_per_10min: 2, good_break_bonus: 3, max_bonus: 15}
 
 privacy: {save_frames: false, show_camera_indicator: true}
 

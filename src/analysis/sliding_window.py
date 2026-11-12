@@ -96,6 +96,9 @@ class SlidingWindow:
         self._lock = threading.Lock()
         self._last_yawn_counted: float = float("-inf")
         self._counted_yawns: deque[float] = deque()
+        self._hand_prev = False
+        self.total_yawns = 0          # monotonic counters, used to log events (FASE 7)
+        self.total_hand_episodes = 0
 
     def set_threshold(self, ear_threshold: float) -> None:
         """Use a newly calibrated EAR threshold."""
@@ -112,6 +115,9 @@ class SlidingWindow:
             hand=f.user_present and f.hand_to_forehead,
             nose=f.nose_xy if f.user_present else None,
         )
+        if s.hand and not self._hand_prev:
+            self.total_hand_episodes += 1
+        self._hand_prev = s.hand
         with self._lock:
             self._samples.append(s)
             cutoff = f.ts - self.span
@@ -125,6 +131,7 @@ class SlidingWindow:
             if dur >= self.yawn_min and start - self._last_yawn_counted >= self.yawn_debounce:
                 self._last_yawn_counted = start
                 self._counted_yawns.append(start)
+                self.total_yawns += 1
         while self._counted_yawns and self._counted_yawns[0] < now - self.span:
             self._counted_yawns.popleft()
         return len(self._counted_yawns)

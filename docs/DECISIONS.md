@@ -160,6 +160,21 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Deteksi fullscreen** bersifat best-effort: di macOS memakai Quartz (`pyobjc-framework-Quartz`), di Windows memakai ctypes, dan di platform lain nonaktif. Saat ada aplikasi lain yang fullscreen, kucing disembunyikan dan saran ditahan.
 - **Opsi aktivitas keyboard intens** (spesifikasi 5.5, sifatnya opsional) tidak dibuat, karena butuh hook keyboard global yang bermasalah untuk privasi.
 
+## FASE 6
+
+### D-023 · Database dan ringkasan harian
+- **Skema:** sesuai spesifikasi, ditambah tabel `app_state` (key/value teks, misalnya status disclaimer first-run) lewat migrasi versi 2. Indeks ditambahkan pada kolom `ts`.
+- **Penulisan:** `DbWriter` (thread terpisah) mem-flush antrean setiap `storage.flush_sec` dan saat aplikasi ditutup. `stress_log` ditulis setiap `storage.log_every_sec` (10 detik). Respons saran diperbarui berdasarkan `(ts, message_key)`, karena `advice_log` tidak punya kolom id.
+- **Definisi ringkasan:**
+  - `work_minutes`: jumlah baris dengan pengguna terlihat × 10 detik.
+  - `break_count`: event `user_returned` dengan away ≥ `habit.away_min_sec`.
+  - `longest_stretch_min`: deret baris hadir terpanjang (jeda > 3 interval memutus deret).
+  - `bad_posture_minutes`: jumlah event `bad_posture` × `posture_hold_min`.
+  - `yawn_total`: event `yawn`.
+  - `advice_followed`: respons `oke`.
+- **health_score:** `100 − avg × 0,5 − 5/jam kerja melebihi 50 menit tanpa jeda − 2 per 10 menit postur buruk + 3 per good_break (maks 15)`, di-clamp ke 0..100. Semua koefisien ada di `config.health`.
+- **Grafik dashboard:** memakai matplotlib (`backend_qtagg`) agar tidak menambah dependensi baru.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:
