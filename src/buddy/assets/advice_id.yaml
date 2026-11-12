@@ -1,0 +1,156 @@
+# Bank saran Virtual Buddy (spesifikasi 5.6). Maksimal 2 kalimat dan 90 karakter per saran.
+# Setiap kunci: ekspresi kucing, severity (1 positif, 2 sedang, 3 penting), minimal 4 saran
+# bernada lembut, dan saran bernada tegas (tetap sopan) yang dipakai setelah 2 kali diabaikan.
+
+stress_sedang:
+  expression: worried
+  severity: 2
+  lembut:
+    - "Kelihatannya kamu mulai tegang. Tarik napas dalam tiga kali, yuk."
+    - "Santai sebentar ya. Lemaskan bahu dan rahangmu."
+    - "Ada tanda lelah nih. Pandang jauh 20 detik biar mata rileks."
+    - "Pelan-pelan saja. Minum air dulu, kerjaannya nggak ke mana-mana."
+  tegas:
+    - "Tanda lelahmu terus muncul. Berhenti 2 menit dan atur napas, ya."
+    - "Sudah beberapa kali lho. Ambil jeda singkat sekarang, yuk."
+
+stress_tinggi:
+  expression: alert
+  severity: 3
+  lembut:
+    - "Kamu tampak sangat lelah. Istirahat 5 menit, yuk."
+    - "Tanda lelahmu tinggi. Berdiri dan regangkan badan sebentar ya."
+    - "Matamu sering terpejam. Cuci muka atau jalan sebentar, yuk."
+    - "Waktunya jeda. Tinggalkan layar beberapa menit dulu ya."
+  tegas:
+    - "Lelahmu sudah tinggi cukup lama. Tolong istirahat sekarang, ya."
+    - "Aku khawatir. Berhenti dulu 5 menit sebelum lanjut, ya."
+
+burnout_risk:
+  expression: concerned
+  severity: 3
+  lembut:
+    - "Beberapa jam ini kamu terus tegang. Jangan lupa jaga diri, ya."
+    - "Tren lelahmu naik terus. Mungkin saatnya istirahat lebih panjang."
+    - "Kamu sudah bekerja keras. Coba atur ulang jadwal hari ini, yuk."
+    - "Stresmu tinggi beberapa jam. Ngobrol atau jalan sebentar, yuk."
+  tegas:
+    - "Tanda burnout makin jelas. Tolong ambil istirahat panjang hari ini."
+    - "Ini sudah berjam-jam. Prioritaskan istirahatmu sekarang, ya."
+
+need_break:
+  expression: alert
+  severity: 3
+  lembut:
+    - "Sudah 50 menit nih. Berdiri sebentar yuk, regangkan badan!"
+    - "Matamu butuh istirahat. Pandang jauh 20 detik ya!"
+    - "Waktunya jalan sebentar. Ambil minum sekalian, yuk."
+    - "Duduk lama bikin pegal. Berdiri dan putar bahu sebentar ya."
+  tegas:
+    - "Kamu belum istirahat lama sekali. Berdiri sekarang, ya."
+    - "Sudah lewat waktunya. Tinggalkan kursi 5 menit dulu, yuk."
+
+bad_posture:
+  expression: worried
+  severity: 2
+  lembut:
+    - "Punggungmu mulai bungkuk, coba duduk tegak lagi ya."
+    - "Yuk, tegakkan badan dan sandarkan punggung ke kursi."
+    - "Kepalamu agak turun. Angkat sedikit dan rilekskan leher, ya."
+    - "Posisi duduk yang tegak bikin nggak cepat pegal. Coba lagi, yuk."
+  tegas:
+    - "Postur bungkukmu bertahan lama. Tolong duduk tegak sekarang."
+    - "Lehermu bisa sakit nanti. Perbaiki posisi duduk dulu, ya."
+
+too_close:
+  expression: curious
+  severity: 2
+  lembut:
+    - "Kamu terlalu dekat dengan layar. Mundur sedikit, yuk."
+    - "Jarak ideal sekitar satu lengan. Geser kursi sedikit ke belakang, ya."
+    - "Wajahmu dekat sekali ke layar. Mundur biar mata nggak cepat capek."
+    - "Coba perbesar huruf di layar daripada mendekat, ya."
+  tegas:
+    - "Masih terlalu dekat dengan layar. Tolong mundur sekarang, ya."
+    - "Matamu bisa tegang. Jauhkan wajah dari layar dulu."
+
+dry_eyes:
+  expression: eye_care
+  severity: 2
+  lembut:
+    - "Kamu jarang berkedip. Kedipkan mata pelan beberapa kali, yuk."
+    - "Mata kering bikin lelah. Pejamkan mata 10 detik, ya."
+    - "Ingat aturan 20-20-20: tiap 20 menit, lihat jauh 20 detik."
+    - "Kedipkan mata pelan-pelan, lalu pandang ke luar jendela sebentar."
+  tegas:
+    - "Kedipanmu masih jarang sekali. Istirahatkan mata sekarang, ya."
+    - "Matamu butuh jeda. Pejamkan mata 20 detik dulu."
+
+sleepy:
+  expression: sleepy
+  severity: 2
+  lembut:
+    - "Kamu menguap beberapa kali. Minum air dan tarik napas dalam yuk."
+    - "Kelihatannya mengantuk. Cuci muka atau jalan sebentar, ya."
+    - "Matamu mulai berat. Berdiri dan gerakkan badan sebentar, yuk."
+    - "Ngantuk ya? Buka jendela atau cari udara segar sebentar."
+  tegas:
+    - "Kantukmu terus muncul. Istirahat sebentar sebelum lanjut, ya."
+    - "Kamu terlihat sangat mengantuk. Tolong jeda dulu sekarang."
+
+late_night:
+  expression: concerned
+  severity: 3
+  lembut:
+    - "Sudah larut malam. Jangan lupa tidur cukup, ya."
+    - "Malam sudah larut. Simpan pekerjaan dan istirahat, yuk."
+    - "Tidur cukup bikin besok lebih segar. Pertimbangkan berhenti ya."
+    - "Sudah lewat jam 11 malam. Waktunya bersiap tidur, yuk."
+  tegas:
+    - "Sudah sangat larut. Tolong segera istirahat, ya."
+    - "Tubuhmu butuh tidur. Lanjutkan besok saja, ya."
+
+good_break:
+  expression: happy
+  severity: 1
+  lembut:
+    - "Istirahat yang bagus! Selamat lanjut bekerja."
+    - "Mantap, kamu ambil jeda. Badan pasti lebih segar sekarang."
+    - "Jeda yang pas! Semangat lagi, ya."
+    - "Keren, kamu ingat istirahat. Aku senang!"
+
+doing_great:
+  expression: happy
+  severity: 1
+  lembut:
+    - "Dua jam kerja dengan tenang. Hebat!"
+    - "Kamu bekerja dengan santai dan fokus. Pertahankan, ya!"
+    - "Ritme kerjamu bagus hari ini. Keren!"
+    - "Tenang dan produktif. Aku bangga padamu!"
+
+user_returned:
+  expression: wake_greet
+  severity: 1
+  lembut:
+    - "Selamat datang kembali!"
+    - "Hai, kamu kembali! Siap lanjut?"
+    - "Halo lagi! Semoga istirahatnya menyenangkan."
+    - "Yay, kamu sudah kembali!"
+
+celebrate:
+  expression: celebrate
+  severity: 1
+  lembut:
+    - "Hari ini kamu istirahat dengan baik berkali-kali. Hebat!"
+    - "Kebiasaan istirahatmu keren hari ini. Rayakan!"
+    - "Empat jeda bagus hari ini. Kamu juara!"
+    - "Pola kerja sehat tercapai hari ini. Selamat!"
+
+click:
+  expression: happy
+  severity: 1
+  lembut:
+    - "Meong!"
+    - "Meong~ semangat ya!"
+    - "Prr... aku menemanimu."
+    - "Meong! Jangan lupa istirahat."

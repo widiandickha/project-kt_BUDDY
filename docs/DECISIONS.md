@@ -124,6 +124,42 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **good_break:** away 5–15 menit setelah kerja ≥ `habit.long_work_min` (30 menit).
 - **doing_great:** 2 jam berturut-turut di level rendah.
 
+## FASE 5
+
+### D-020 · State machine Buddy
+- **Bentuk:** enum 12 state + tabel transisi `(state, trigger) → state` di `buddy_state.py`.
+- **Aturan prioritas:**
+  - Baris yang ditulis khusus untuk state saat ini selalu boleh (misalnya WORRIED --stress_calm--> IDLE).
+  - Baris wildcard tidak boleh memotong reaksi berprioritas lebih tinggi.
+  - Mood dasar (IDLE, WORRIED, CONCERNED, SLEEPY, SLEEPING) tidak diganti mood yang lebih rendah.
+  - Reaksi singkat berprioritas rendah (HAPPY saat WORRIED) boleh tampil, lalu kembali ke mood dasar.
+  - Klik pengguna selalu dijawab, kecuali saat tidur.
+  - SLEEPING hanya bangun lewat `user_returned`.
+- **ALERT:** di `animations.yaml`, ALERT tidak berulang (pop 1,5 detik). Setelah animasinya selesai, kucing kembali ke mood dasar (WORRIED bila stres masih tinggi). "Saran selesai" (Oke/tutup bubble) membawa ke IDLE.
+- **STRETCH:** diputar saat pengguna menekan Oke pada saran `need_break`.
+
+### D-021 · `BuddyEvent` dan pemetaan event
+- `BuddyEvent.kind` adalah trigger state machine, sedangkan `message_key` adalah kunci bank saran (kosong berarti tanpa bubble).
+- `event_mapper.py` mengubah output analisis menjadi BuddyEvent:
+  - kenaikan level → `stress_sedang` / `stress_tinggi`
+  - rendah selama `buddy.calm_sec` → `stress_calm`
+  - `burnout_risk` saat mulai terdeteksi
+  - indikator PERCLOS atau menguap ternormalisasi ≥ `buddy.sleepy_component` → `sleepy`
+  - away ≥ `away_sleep_sec` → `user_away_long`
+  - ≥ 4 `good_break` sehari → `celebrate`
+  - alert habit dipetakan 1:1.
+
+### D-022 · Bubble, menu, dan Do Not Disturb
+- **Tombol bubble:**
+  - "Jangan ingatkan hari ini" hanya membisukan **kunci saran itu** sampai tengah malam.
+  - "Diam hari ini" di menu klik kanan membisukan semua saran.
+  - "Nanti" menunda kunci itu 10 menit.
+  - Bubble yang hilang sendiri dicatat "diabaikan" dan dihitung untuk eskalasi nada.
+- **Batas 8 bubble per jam** berlaku untuk semua severity.
+- **Klik kucing** menampilkan "Meong!" lewat bubble, karena belum ada aset suara.
+- **Deteksi fullscreen** bersifat best-effort: di macOS memakai Quartz (`pyobjc-framework-Quartz`), di Windows memakai ctypes, dan di platform lain nonaktif. Saat ada aplikasi lain yang fullscreen, kucing disembunyikan dan saran ditahan.
+- **Opsi aktivitas keyboard intens** (spesifikasi 5.5, sifatnya opsional) tidak dibuat, karena butuh hook keyboard global yang bermasalah untuk privasi.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

@@ -14,7 +14,7 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 | 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual & rekaman relawan |
 | 3 | Training YOLOv8, evaluasi, demo detektor | ✅ pipeline selesai · ⏳ training ulang setelah label final |
 | 4 | Analisis & skoring (EAR, PERCLOS, skor, hysteresis, burnout, habit, replay) | ✅ selesai |
-| 5 | Virtual Buddy | – |
+| 5 | Virtual Buddy (12 ekspresi, sprite player, state machine, saran, debug panel) | ✅ selesai |
 | 6 | Database & ringkasan harian | – |
 | 7 | Integrasi | – |
 | 8 | Pengujian | – |
@@ -99,6 +99,16 @@ Hasil evaluasi terbaru ada di [docs/eval/metrics.md](docs/eval/metrics.md). Sela
 
 Tanpa `models/best.pt`, mata/menguap/kerutan diambil dari landmark MediaPipe (D-016).
 
+### Virtual Buddy (FASE 5)
+
+```bash
+.venv/bin/python -m src.buddy.demo                       # kucing di bawah layar + debug panel
+.venv/bin/python -m src.buddy.demo --sheet buddy.png     # render 12 ekspresi ke satu gambar
+.venv/bin/python scripts/generate_placeholder_sprites.py # buat ulang sprite placeholder (tidak menimpa)
+```
+
+Ganti sprite placeholder dengan menimpa `src/buddy/assets/cat/<ekspresi>.png` (PNG RGBA 512×512, kaki di bawah-tengah). Tidak perlu mengubah kode. Saran Buddy ada di `src/buddy/assets/advice_id.yaml`.
+
 ## Struktur
 
 ```text
@@ -114,7 +124,8 @@ src/
   core/                # config.py, device.py, events.py, (FASE 7) pipeline.py
   detection/           # classes.py, face_detector.py (+ --demo), ear_calculator.py, pose_estimator.py
   analysis/            # feature_extractor, sliding_window, stress_scorer, burnout_trend, habit_evaluator, calibration, engine, replay
-  capture/  buddy/  storage/  ui/
+  buddy/               # buddy_window, sprite_player, transforms, overlays, buddy_state, advice_engine, speech_bubble, controller, demo, assets/
+  capture/  storage/  ui/
 training/              # common.py, split_dataset.py, augment.py, check_dataset.py, train.py, evaluate.py
 scripts/               # benchmark_fps.py, collect_data.py, import_public.py, preannotate.py
 tests/

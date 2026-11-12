@@ -63,6 +63,19 @@ buddy:
   overlays_enabled: true
   anim_fps: 60
   idle_fps: 30
+  # Tambahan FASE 5 (D-020 s.d. D-022)
+  base_px: 160              # ukuran sprite di layar sebelum scale (spesifikasi 128..192)
+  position: right           # right | center (tepi bawah layar, di atas taskbar)
+  margin_px: 8
+  calm_sec: 60              # stres rendah selama ini -> kembali IDLE
+  sleepy_component: 0.5     # indikator PERCLOS/menguap ternormalisasi >= ini -> SLEEPY
+  celebrate_breaks: 4       # jumlah good_break sehari untuk CELEBRATE
+  snooze_min: 10            # tombol "Nanti"
+  pause_min: 30             # menu "Jeda 30 menit"
+  escalate_after: 2         # saran diabaikan sekian kali -> nada tegas
+  max_chars: 90
+  mask_hz: 10
+  fullscreen_poll_sec: 2
 
 storage: {db_path: data/stress_buddy.db, retention_days: 90, flush_sec: 10}
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -10,6 +11,7 @@ from types import ModuleType
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")  # Qt widgets without a display
 
 
 def load_script(name: str) -> ModuleType:
@@ -27,3 +29,11 @@ def load_script(name: str) -> ModuleType:
 def script():
     """Fixture returning the script loader."""
     return load_script
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    """One QApplication for all Qt tests (offscreen)."""
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
