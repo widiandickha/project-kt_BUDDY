@@ -68,6 +68,30 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **DoD `yolo val`:** dijalankan lewat `training/check_dataset.py` dengan YOLOv8n 4 kelas tanpa bobot, agar nama kelas cocok. Metriknya ≈ 0 dan memang tidak bermakna di fase ini.
 - **Sampling NTHU:** frame-nya berurutan dari video, sehingga diambil merata per grup (subjek × kacamata × skenario). Kuota per petunjuk ada di config (`menguap` 300 agar instance menguap cukup).
 
+## FASE 3
+
+### D-013 · Input detektor grayscale
+- **Konteks:** seluruh data NTHU grayscale, sedangkan webcam dan rekaman relawan berwarna (D-010).
+- **Keputusan:** `det.grayscale: true`.
+  - `split_dataset.py` mengubah gambar berwarna menjadi grayscale 3 kanal. Gambar yang sudah abu-abu cukup di-link.
+  - `FaceDetector.predict()` mengubah frame webcam dengan cara yang sama.
+  - Augmentasi warna Ultralytics (`hsv_h`, `hsv_s`) dimatikan.
+- **Alasan:** cara paling sederhana agar training dan inferensi melihat domain yang sama. Warna tidak dibutuhkan untuk membedakan mata tertutup, menguap, atau kerutan dahi.
+
+### D-014 · Training di Apple MPS
+- **Keputusan:** training memakai device `auto`, yang di Mac berarti MPS. Hyperparameter mengikuti spesifikasi: `epochs=100, imgsz=640, batch=16, patience=20`, plus `deterministic=True, seed=42`.
+  - Ultralytics memaksa `workers=0` di MPS.
+  - Kecepatannya sekitar 4 menit per epoch untuk 5.114 gambar train (2.557 asli + 2.557 augmentasi).
+- **Status (12 Nov 2026):** run pertama dengan label draf dihentikan atas permintaan setelah 2 epoch (val mAP50 0,90 → 0,86). Angka tinggi ini wajar karena label draf berasal dari aturan MediaPipe yang mudah ditiru. Checkpoint ada di `runs/detect/face/` (bisa dilanjutkan dengan `--resume`). `models/best.pt` belum dibuat, sehingga DoD FASE 3 belum terpenuhi.
+- **Catatan:** beberapa operasi MPS tidak punya implementasi deterministik (muncul peringatan), sehingga hasil bisa sedikit berbeda antar-run. Untuk run final, GPU CUDA atau Google Colab lebih cepat; caranya cukup `--device cuda`.
+
+### D-015 · Evaluasi dan status label
+- **Keputusan:**
+  - `training/evaluate.py` mengevaluasi split **test** (subjek yang tidak dipakai saat training) di imgsz training, lalu menulis `docs/eval/metrics.md`, `metrics.json`, confusion matrix, kurva PR/F1, dan kurva training.
+  - Flag `--label-status` defaultnya `draf`, dan laporannya diberi peringatan "tidak untuk Bab IV". Pakai `--label-status final` hanya setelah label dikoreksi manual.
+- **Alasan:** mencegah angka dari label otomatis tidak sengaja masuk laporan.
+- **Catatan:** inferensi runtime memakai `inference.imgsz=480` agar lebih cepat. Selisih akurasi 640 vs 480 diukur di FASE 8 (`evaluate.py --imgsz 480`).
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

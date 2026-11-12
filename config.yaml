@@ -6,7 +6,7 @@ camera: {index: 0, width: 640, height: 480, fps: 30}
 
 inference: {imgsz: 480, target_fps: 12, performance_mode: false, device: auto}
 
-det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5}
+det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true}  # grayscale: D-013
 
 pose: {model: models/yolov8n-pose.pt, min_kp_conf: 0.5, hand_face_ratio: 0.45, hand_min_frames: 5}
 
@@ -74,3 +74,18 @@ dataset:
     pad_mouth: 0.06
     pad_brow: 0.05
   augment: {copies: 1, brightness: 0.25, contrast: 0.25, blur_max_kernel: 5, rotate_deg: 10, hflip_p: 0.5, seed: 42}
+
+# FASE 3: training YOLOv8 (hyperparameter awal spesifikasi; lihat docs/DECISIONS.md D-013 s.d. D-015).
+train:
+  base_model: yolov8n.pt        # naik ke yolov8s.pt bila mAP50 < target
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  patience: 20
+  augment: true
+  workers: 4
+  seed: 42
+  project: runs/detect
+  name: face
+  target_map50: 0.80
+  eval_dir: docs/eval

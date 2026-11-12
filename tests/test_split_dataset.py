@@ -89,3 +89,18 @@ def test_parse_assign() -> None:
     assert sd.parse_assign(["nthu-006=train"]) == {"nthu-006": "train"}
     with pytest.raises(SystemExit):
         sd.parse_assign(["nthu-006"])
+
+
+def test_place_grayscale_converts_color_and_links_gray(tmp_path: Path) -> None:
+    color = tmp_path / "s__x__y__1.png"
+    gray = tmp_path / "s__x__y__2.jpg"
+    img = np.zeros((10, 10, 3), np.uint8)
+    img[..., 2] = 220
+    cv2.imwrite(str(color), img)
+    cv2.imwrite(str(gray), np.full((10, 10, 3), 90, np.uint8))
+    out = tmp_path / "out"
+    sd.place_grayscale(color, out)
+    sd.place_grayscale(gray, out)
+    converted = cv2.imread(str(out / "s__x__y__1.jpg")).astype(int)
+    assert (converted.max(axis=2) - converted.min(axis=2)).max() <= sd.GRAY_TOLERANCE
+    assert (out / "s__x__y__2.jpg").stat().st_ino == gray.stat().st_ino  # hard link, no re-encode

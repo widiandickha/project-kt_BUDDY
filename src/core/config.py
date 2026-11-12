@@ -26,6 +26,7 @@ REQUIRED_SECTIONS: tuple[str, ...] = (
     "privacy",
     "logging",
     "dataset",
+    "train",
 )
 
 WEIGHT_SUM_TOLERANCE: float = 1e-6

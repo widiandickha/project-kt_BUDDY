@@ -142,7 +142,33 @@ def place(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
-def build_dataset(items: list[Item], assignment: dict[str, str], out_dir: Path) -> dict[str, SplitStats]:
+GRAY_TOLERANCE = 2  # JPEG chroma noise on an already-gray image
+
+
+def place_grayscale(src: Path, dst_dir: Path) -> None:
+    """Place a 3-channel grayscale version of src in dst_dir (detector input is grayscale, D-013).
+
+    Already-gray images are linked as-is; color images are converted and written as JPEG.
+    """
+    import cv2
+    import numpy as np
+
+    img = cv2.imread(str(src))
+    if img is None:
+        raise ValueError(f"Gambar tidak terbaca: {src}")
+    signed = img.astype(np.int16)
+    spread = int((signed.max(axis=2) - signed.min(axis=2)).max())
+    if spread <= GRAY_TOLERANCE:
+        place(src, dst_dir / f"{src.stem}{src.suffix.lower()}")
+        return
+    gray = cv2.cvtColor(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(dst_dir / f"{src.stem}.jpg"), gray, [cv2.IMWRITE_JPEG_QUALITY, 95])
+
+
+def build_dataset(
+    items: list[Item], assignment: dict[str, str], out_dir: Path, grayscale: bool = False
+) -> dict[str, SplitStats]:
     """Write the YOLO folder layout and return per-split stats."""
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -150,7 +176,10 @@ def build_dataset(items: list[Item], assignment: dict[str, str], out_dir: Path) 
     for it in items:
         sp = assignment[it.subject]
         stem = it.image.stem
-        place(it.image, out_dir / "images" / sp / f"{stem}{it.image.suffix.lower()}")
+        if grayscale:
+            place_grayscale(it.image, out_dir / "images" / sp)
+        else:
+            place(it.image, out_dir / "images" / sp / f"{stem}{it.image.suffix.lower()}")
         place(it.label, out_dir / "labels" / sp / f"{stem}.txt")
         st = stats[sp]
         st.subjects.add(it.subject)
@@ -274,7 +303,7 @@ def main(argv: list[str] | None = None) -> int:
     counts = Counter(it.subject for it in items)
     assignment = assign_subjects(dict(counts), ds["split"], int(ds["split"]["seed"]), parse_assign(args.assign))
     out_dir = resolve_path(ds["out_dir"])
-    stats = build_dataset(items, assignment, out_dir)
+    stats = build_dataset(items, assignment, out_dir, grayscale=bool(cfg["det"].get("grayscale", False)))
     write_data_yaml(resolve_path(ds["data_yaml"]), out_dir)
     report = build_report(items, assignment, stats, unlabeled, int(ds["target_per_class"]), int(ds["min_subjects"]))
     report_path = resolve_path(ds["report"])

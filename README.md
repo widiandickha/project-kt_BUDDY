@@ -12,8 +12,8 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 |---|---|---|
 | 1 | Setup environment, config, benchmark FPS | ✅ selesai |
 | 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual & rekaman relawan |
-| 3 | Training YOLOv8 | ⏳ berikutnya |
-| 4 | Analisis & skoring | – |
+| 3 | Training YOLOv8, evaluasi, demo detektor | ✅ pipeline selesai · ⏳ training ulang setelah label final |
+| 4 | Analisis & skoring | ⏳ berikutnya |
 | 5 | Virtual Buddy | – |
 | 6 | Database & ringkasan harian | – |
 | 7 | Integrasi | – |
@@ -79,12 +79,23 @@ Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md). Ringkas
 
 Status dataset terbaru ada di [docs/dataset_report.md](docs/dataset_report.md).
 
+### Training & evaluasi (FASE 3)
+
+```bash
+.venv/bin/python training/train.py                        # 100 epoch, imgsz 640, batch 16, patience 20 -> models/best.pt
+.venv/bin/python training/train.py --model yolov8s.pt     # bila mAP50 < 0.80
+.venv/bin/python training/evaluate.py                     # metrik per kelas di split test -> docs/eval/
+.venv/bin/python -m src.detection.face_detector --demo    # deteksi live dari webcam (q = keluar)
+```
+
+Hasil evaluasi terbaru ada di [docs/eval/metrics.md](docs/eval/metrics.md). Selama label masih draf, angka di sana bukan untuk laporan.
+
 ## Struktur
 
 ```text
 config.yaml            # satu-satunya tempat ambang, bobot, dan parameter
 requirements.txt       # versi dipin
-docs/                  # DECISIONS.md, AUDIT_SPEC.md, ANOTASI.md, dataset_report.md, (nanti) eval/
+docs/                  # DECISIONS.md, AUDIT_SPEC.md, ANOTASI.md, dataset_report.md, eval/
 data/raw/              # gambar mentah + draf label (tidak di-commit)
 data/annotated/        # hasil export tool anotasi (tidak di-commit)
 data/dataset/          # dataset format YOLO (tidak di-commit)
@@ -92,9 +103,9 @@ data/data.yaml         # konfigurasi dataset YOLO (4 kelas)
 models/                # bobot model (tidak di-commit)
 src/
   core/                # config.py, device.py, (FASE 4/7) events.py, pipeline.py
-  detection/classes.py # urutan kelas final
+  detection/           # classes.py (urutan kelas final), face_detector.py (+ --demo)
   capture/  analysis/  buddy/  storage/  ui/
-training/              # common.py, split_dataset.py, augment.py, check_dataset.py, (FASE 3) train.py, evaluate.py
+training/              # common.py, split_dataset.py, augment.py, check_dataset.py, train.py, evaluate.py
 scripts/               # benchmark_fps.py, collect_data.py, import_public.py, preannotate.py
 tests/
 legacy/                # prototipe lama (referensi, tidak dijalankan)
