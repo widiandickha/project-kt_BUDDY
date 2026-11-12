@@ -1,47 +1,48 @@
-app:
-  name: Kucing Teman Kerja
-  theme: light
-  active_hours_enabled: false
-  active_hour_start: 08:00
-  active_hour_end: '22:00'
-  sensitivity: 1.0
-camera:
-  device_index: 0
-  target_fps: 15
-  frame_width: 640
-  frame_height: 480
-models:
-  face_yolo_path: models/face_expression_yolov8n.pt
-  pose_yolo_path: models/yolov8n-pose.pt
-  use_two_class_fallback: false
-  confidence_threshold: 0.45
-calibration:
-  duration_seconds: 10
-  default_ear: 0.28
-  default_mar: 0.15
-  default_brow_ratio: 0.24
-  default_posture_ratio: 0.55
-analysis:
-  sliding_window_seconds: 60
-  burnout_window_minutes: 15
-  db_log_interval_seconds: 5
-  ear_closed_factor: 0.75
-  mar_yawn_threshold: 0.55
-  brow_furrow_factor: 0.88
-  posture_slouch_factor: 0.82
-  hand_to_head_ratio_threshold: 0.48
-  weights:
-    eye_closed: 0.3
-    yawn: 0.2
-    brow_furrow: 0.15
-    posture_slouch: 0.15
-    hand_to_head: 0.1
-    head_restlessness: 0.1
-  thresholds:
-    waspada: 40.0
-    tinggi: 70.0
-    burnout_avg: 60.0
+# Konfigurasi tunggal Stress Buddy.
+# Semua ambang batas, bobot, dan parameter berada di sini (aturan 0 spesifikasi).
+# Isi awal mengikuti bagian 10 + Lampiran A.7; tambahan dicatat di docs/DECISIONS.md.
+
+camera: {index: 0, width: 640, height: 480, fps: 30}
+
+inference: {imgsz: 480, target_fps: 12, performance_mode: false, device: auto}
+
+det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5}
+
+pose: {model: models/yolov8n-pose.pt, min_kp_conf: 0.5, hand_face_ratio: 0.45, hand_min_frames: 5}
+
+ear: {closed_threshold: 0.21, blink_min_ms: 80, microsleep_ms: 400, fusion_w_ear: 0.6, fusion_w_yolo: 0.4}
+
+window: {short_sec: 60, long_sec: 1800, yawn_min_sec: 1.0, yawn_debounce_sec: 10}
+
+score:
+  weights: {perclos: 0.30, yawn: 0.20, furrow: 0.20, hand: 0.15, blink: 0.10, motion: 0.05}
+  thresholds: {low: 35, high: 65}
+  ema_alpha: 0.3
+  up_hold_sec: 20
+  down_hold_sec: 30
+
+burnout: {ma_short_min: 30, ma_long_hours: 4, slope_min: 0.5, min_level: 55, min_duration_min: 120}
+
+habit: {work_break_min: 50, away_min_sec: 300, slouch_drop: 0.15, too_close_ratio: 1.3, low_blink: 8, late_hour: 23}
+
 buddy:
-  cooldown_seconds: 180
-  snooze_minutes: 15
-  overlay_duration_seconds: 8
+  scale: 1.0
+  monitor: 0
+  bubble_sec: 8
+  cooldown_key_min: 15
+  cooldown_global_min: 3
+  max_per_hour: 8
+  away_sleep_sec: 120
+  fps_anim: 10
+  # Lampiran A.7
+  canvas_size: 512
+  overlays_enabled: true
+  anim_fps: 60
+  idle_fps: 30
+
+storage: {db_path: data/stress_buddy.db, retention_days: 90, flush_sec: 10}
+
+privacy: {save_frames: false, show_camera_indicator: true}
+
+# Tambahan (bagian 7 "level dari config"), lihat docs/DECISIONS.md D-004.
+logging: {level: INFO, file: logs/app.log}

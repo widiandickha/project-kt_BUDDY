@@ -1,138 +1,90 @@
-# Kucing Teman Kerja: Pemantau Kelelahan & Stres Pengguna PC
+# Stress Buddy: Deteksi Dini Stres & Evaluasi Habit Pengguna PC
 
-Aplikasi desktop berbasis Python dan PySide6 yang memantau tanda kelelahan dan stres visual secara pasif melalui webcam lokal, menghitung skor kelelahan dalam jendela geser (*sliding window*) 60 detik, menampilkan pengingat lewat karakter kucing *Virtual Buddy*, dan menyimpan riwayat angka indikator ke database SQLite untuk evaluasi harian maupun mingguan.
+Aplikasi desktop yang memantau pengguna PC lewat webcam, mendeteksi tanda lelah atau stres (mata tertutup, menguap, kerutan dahi, tangan ke dahi, postur), lalu memberi umpan balik lewat kucing *Virtual Buddy* di bawah layar. Semua pemrosesan lokal dan frame video tidak pernah disimpan.
 
-Seluruh pemrosesan berjalan 100% lokal di perangkat pengguna dan **tidak ada gambar atau rekaman video yang disimpan**.
+> Sistem ini adalah alat bantu kesadaran diri, **bukan alat diagnosis medis**.
 
----
+Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama tersimpan di `legacy/` sebagai referensi (lihat `docs/AUDIT_SPEC.md` dan `docs/DECISIONS.md`).
 
-## 1. Struktur Folder Proyek
+## Status fase
+
+| Fase | Isi | Status |
+|---|---|---|
+| 1 | Setup environment, config, benchmark FPS | ✅ selesai |
+| 2 | Dataset & anotasi | ⏳ berikutnya |
+| 3 | Training YOLOv8 | – |
+| 4 | Analisis & skoring | – |
+| 5 | Virtual Buddy | – |
+| 6 | Database & ringkasan harian | – |
+| 7 | Integrasi | – |
+| 8 | Pengujian | – |
+| 9 | Laporan & demo | – |
+
+## Instalasi
+
+Butuh Python 3.11. Cara termudah di macOS adalah dengan [uv](https://docs.astral.sh/uv/):
+
+```bash
+brew install uv
+uv python install 3.11
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python -r requirements.txt
+```
+
+Tanpa uv (Python 3.10/3.11 sudah terpasang):
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+## Menjalankan
+
+Benchmark FPS (webcam + `yolov8n.pt` pretrained, 30 detik, jendela live dengan kotak orang dan angka FPS; tekan `q` untuk keluar):
+
+```bash
+.venv/bin/python scripts/benchmark_fps.py
+```
+
+Opsi yang berguna:
+
+| Opsi | Fungsi |
+|---|---|
+| `--device cpu` | paksa CPU (imgsz otomatis 480) |
+| `--duration 10` | ubah lama benchmark |
+| `--source video.mp4` | pakai video atau gambar, bukan webcam |
+| `--no-show` | tanpa jendela preview |
+
+Bobot `models/yolov8n.pt` diunduh otomatis pada run pertama. Di macOS, izinkan akses kamera untuk Terminal/IDE di **System Settings → Privacy & Security → Camera**.
+
+Test:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+## Struktur
 
 ```text
-KT/
-├── 1. MRL DATASET/               # Dataset 1: MRL Eye Dataset (sudah terpasang di root)
-├── 3. NTHU DDD/                  # Dataset 3: NTHU-DDD Multi-Class (sudah terpasang di root)
-├── config.yaml                   # Konfigurasi ambang skor, bobot indikator, cooldown, dan model
-├── DESIGN.md                     # Dokumen arah desain, palet kontras WCAG AA, dan alasan keputusan visual
-├── main.py                       # Titik masuk utama aplikasi desktop
-├── requirements.txt              # Daftar pustaka Python yang dibutuhkan
-├── data/
-│   └── wellness_buddy.db         # Database SQLite otomatis (sessions, score_log, events, buddy_log)
-├── models/
-│   ├── yolov8n-pose.pt           # Model pose tubuh bawaan (diunduh otomatis saat pertama jalan)
-│   └── face_expression_yolov8n.pt # Model hasil training ekspresi wajah kustom
-├── scripts/
-│   ├── prepare_yolo_dataset.py   # Konversi dataset MRL, NTHU-DDD, dan UTA-RLDD ke format YOLOv8
-│   ├── annotate_custom_webcam.py # Alat rekam & anotasi cepat webcam untuk kelas kerutan_dahi
-│   └── train_and_evaluate.py     # Script training YOLOv8n, evaluasi test split per subjek, & ekspor ONNX
-└── src/
-    ├── config.py                 # Pembaca dan penyimpan config.yaml
-    ├── database.py               # Pengelola SQLite thread-safe
-    ├── detectors/                # Modul EAR/MAR/alis MediaPipe, YOLOv8 wajah, dan YOLOv8-pose
-    ├── analysis/                 # Kalibrasi baseline awal sesi, sliding window 60d, & deteksi burnout
-    ├── buddy/                    # 5 ekspresi kucing, pesan saran, dan decision engine (cooldown/snooze)
-    └── ui/                       # Jendela utama PySide6, overlay Buddy, grafik tren, dan system tray
+config.yaml            # satu-satunya tempat ambang, bobot, dan parameter
+requirements.txt       # versi dipin
+docs/                  # DECISIONS.md, AUDIT_SPEC.md, (nanti) dataset_report.md, eval/
+data/raw/              # gambar mentah relawan (tidak di-commit)
+data/dataset/          # dataset format YOLO (tidak di-commit)
+models/                # bobot model (tidak di-commit)
+src/
+  core/                # config.py, device.py, (FASE 4/7) events.py, pipeline.py
+  capture/  detection/  analysis/  buddy/  storage/  ui/
+training/              # FASE 2–3: train.py, evaluate.py, augment.py
+scripts/               # benchmark_fps.py, (FASE 2) collect_data.py
+tests/
+legacy/                # prototipe lama (referensi, tidak dijalankan)
 ```
 
----
+## Troubleshooting
 
-## 2. Cara Menjalankan Aplikasi
-
-Semua dependensi telah diinstal di dalam virtual environment `.venv` (Python 3.12).
-
-### Menjalankan dengan Webcam Asli
-```bash
-.venv/bin/python main.py
-```
-
-### Menjalankan dalam Mode Simulasi (Tanpa Kamera Fisik)
-Gunakan opsi `--simulate` untuk menguji siklus perubahan skor (Normal, Mengantuk/Menguap, Dahi Tegang, hingga Kelelahan Tinggi), pemicu *Virtual Buddy*, dan grafik evaluasi tanpa perlu menyalakan webcam:
-```bash
-.venv/bin/python main.py --simulate
-```
-
----
-
-## 3. Tutorial Menautkan Dataset & Menyiapkan Format YOLOv8
-
-Folder `1. MRL DATASET` dan `3. NTHU DDD` yang sudah kamu tempatkan di root proyek langsung dikenali secara otomatis oleh script `scripts/prepare_yolo_dataset.py`.
-
-### Pemetaan Kelas & Pembagian Subjek (Tanpa Kebocoran Data)
-Sesuai kebutuhan evaluasi pada Bab IV (pengujian wajib dilakukan pada subjek yang tidak dipakai saat training), script melakukan pembagian *subject-wise split* berdasarkan prefiks nama file:
-1. **Dataset 3 (`3. NTHU DDD/Multi class/train/`)**:
-   - Subjek `001` dan `002` masuk ke `train`, subjek `005` masuk ke `val`, dan subjek `006` masuk ke `test`.
-   - Subfolder `drowsy/slowBlinkWithNodding` dan `drowsy/sleepyCombination` dipetakan ke kelas `0` (`mata_tertutup`).
-   - Subfolder `drowsy/yawning` dipetakan ke kelas `1` (`menguap`).
-   - Subfolder `notdrowsy` dijadikan sampel negatif (file label `.txt` kosong) agar model mengenali wajah normal dan menekan *false alarm* per jam.
-2. **Dataset 1 (`1. MRL DATASET/data/`)**:
-   - Subjek `s0001` sampai `s0026` masuk ke `train`, `s0027` sampai `s0032` ke `val`, dan `s0033` sampai `s0037` ke `test`.
-   - Subfolder `sleepy` dipetakan ke kelas `0` (`mata_tertutup`), sedangkan `awake` menjadi sampel negatif.
-
-### Menjalankan Konversi Dataset 1 & Dataset 3 (Langsung Jalan)
-Jalankan perintah berikut dari root proyek untuk membuat dataset siap latih di `datasets/face_fatigue_yolo/`:
-```bash
-.venv/bin/python scripts/prepare_yolo_dataset.py --max-nthu-per-folder 400 --max-mrl-per-group 250
-```
-Setelah selesai, file konfigurasi `datasets/face_fatigue_yolo/data.yaml` akan terbentuk otomatis.
-
-### Cara Menautkan Dataset 2 (`UTA-RLDD`) Tanpa Menyalin ke Folder Proyek
-Karena ukuran `UTA-RLDD` sangat besar, kamu **tidak perlu menyalinnya** ke dalam folder proyek `KT`. Cukup simpan di *hard disk* eksternal atau folder `Downloads`, lalu tautkan dengan salah satu dari dua cara berikut:
-
-1. **Cara 1: Berikan argumen `--uta-dir` saat menjalankan script konversi**
-   Script hanya akan mengekstrak sebagian frame penting (misalnya setiap 30 frame) ke ukuran kecil di `datasets/face_fatigue_yolo/`:
-   ```bash
-   .venv/bin/python scripts/prepare_yolo_dataset.py \
-     --uta-dir "/Volumes/DriveEksternal/uta-reallife-drowsiness-dataset"
-   ```
-2. **Cara 2: Buat Symbolic Link (Tautan Simbolik) di macOS**
-   Jika ingin meletakkan pintasan folder di dalam proyek tanpa memakai ruang penyimpanan ganda:
-   ```bash
-   ln -s "/Volumes/DriveEksternal/uta-reallife-drowsiness-dataset" "2. UTA RLDD"
-   ```
-
----
-
-## 4. Menangani Kelas `kerutan_dahi` & Rencana Cadangan
-
-Proyek ini menyediakan dua jalur yang berjalan berdampingan untuk indikator `kerutan_dahi`:
-
-### Jalur A: Merekam Data Kustom `kerutan_dahi` via Webcam
-Jalankan alat bantu perekam berikut untuk mengambil sampel wajah sendiri beserta kotak pembatas (*bounding box*) otomatis dari MediaPipe:
-```bash
-.venv/bin/python scripts/annotate_custom_webcam.py
-```
-- Tekan tombol `1` untuk menyimpan sampel `mata_tertutup`.
-- Tekan tombol `2` untuk menyimpan sampel `menguap`.
-- Tekan tombol `3` saat mengerutkan dahi untuk menyimpan sampel `kerutan_dahi`.
-- Tekan `q` untuk keluar, lalu jalankan ulang `scripts/prepare_yolo_dataset.py` agar rekaman kustom digabungkan ke `datasets/face_fatigue_yolo/`.
-
-### Jalur B: Mode 2 Kelas + Pengukuran Jarak Alis Landmark (Rencana Cadangan)
-Jika waktu pengumpulan data `kerutan_dahi` terbatas:
-1. Buat dataset 2 kelas (`mata_tertutup` dan `menguap`):
-   ```bash
-   .venv/bin/python scripts/prepare_yolo_dataset.py --two-class
-   ```
-2. Di aplikasi utama, buka tab **Pengaturan & Privasi** lalu centang **Gunakan mode 2 kelas**. Aplikasi akan mendeteksi ketegangan dahi menggunakan rasio penyempitan jarak alis ke mata dari *landmark* MediaPipe terhadap *baseline* awal sesi.
-
----
-
-## 5. Training Model YOLOv8n, Evaluasi, & Ekspor ONNX
-
-Setelah `datasets/face_fatigue_yolo/data.yaml` terbentuk, jalankan training dan evaluasi otomatis:
-```bash
-.venv/bin/python scripts/train_and_evaluate.py --epochs 25 --imgsz 640 --batch 16 --device mps --export-onnx
-```
-Script ini akan:
-1. Melatih `yolov8n.pt` dan menyalin bobot terbaik (`best.pt`) ke `models/face_expression_yolov8n.pt`.
-2. Mengevaluasi model pada split `test` (subjek yang tidak dipakai saat training) serta mencetak nilai `mAP50`, `mAP50-95`, `Precision`, dan `Recall`. Confusion matrix tersimpan otomatis di folder `runs/detect/face_fatigue_yolov8n/`.
-3. Mengukur rata-rata FPS dan latensi inferensi per frame.
-4. Mengekspor model ke `models/face_expression_yolov8n.onnx` untuk akselerasi inferensi CPU.
-
-Begitu file `models/face_expression_yolov8n.pt` atau `.onnx` tersedia, aplikasi desktop `main.py` otomatis memuatnya pada sesi berikutnya.
-
----
-
-## 6. Batasan Sistem (Untuk Dokumentasi Laporan Bab I-V)
-
-- **Indikator Visual, Bukan Diagnosis Medis**: Skor stres (0 sampai 100) dihitung dari frekuensi mata tertutup, menguap, penyempitan jarak alis, postur membungkuk, serta gerakan tangan ke kepala. Angka ini adalah pengingat ergonomi dan istirahat kerja, bukan alat diagnosis klinis.
-- **Privasi Data Lokal**: Kamera hanya membaca matriks piksel di memori RAM sementara untuk diekstrak menjadi angka rasio geometri. Database SQLite (`data/wellness_buddy.db`) hanya mencatat stempel waktu dan angka indikator.
+| Masalah | Solusi |
+|---|---|
+| `Gagal membuka sumber video '0'` | Izin kamera belum diberikan, atau kamera sedang dipakai aplikasi lain. Coba `--source 1` bila ada kamera eksternal. |
+| `ensurepip` gagal dengan `pyexpat ... Symbol not found` | `python@3.11` dari Homebrew tidak cocok dengan macOS 26. Pakai Python dari `uv` (lihat Instalasi). |
+| FPS rendah di CPU | Coba `--imgsz 320`. Target spesifikasi ≥ 10 FPS di CPU kelas menengah. |

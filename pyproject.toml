@@ -1,0 +1,10 @@
+[project]
+name = "stress-buddy"
+version = "0.1.0"
+description = "Deteksi dini stres & evaluasi habit pengguna PC dengan Virtual Buddy kucing"
+requires-python = ">=3.10,<3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

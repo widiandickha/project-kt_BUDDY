@@ -1,26 +1,35 @@
-# Virtual Environment
+# Virtual environment
 .venv/
+.venv-legacy/
 venv/
 env/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
 
-# Datasets (ukuran besar)
+# Dataset mentah & hasil konversi (ukuran besar, data wajah relawan)
 1. MRL DATASET/
-3. NTHU DDD/
 2. UTA RLDD/
+3. NTHU DDD/
 datasets/
+data/raw/
+data/dataset/
 data/*.db
 data/*.sqlite3
 
-# Models & Weights besar (unduh via script atau runtime)
+# Model & hasil training
 models/*.pt
 models/*.onnx
+models/*.task
+models/haarcascades/
 runs/
 *.pt
 
-# OS & Editor
+# Log aplikasi
+logs/
+
+# OS & editor
 .DS_Store
 .idea/
 .vscode/
