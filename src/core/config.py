@@ -25,6 +25,7 @@ REQUIRED_SECTIONS: tuple[str, ...] = (
     "storage",
     "privacy",
     "logging",
+    "dataset",
 )
 
 WEIGHT_SUM_TOLERANCE: float = 1e-6
@@ -65,6 +66,15 @@ def validate_config(cfg: dict[str, Any]) -> None:
     fusion = cfg["ear"]["fusion_w_ear"] + cfg["ear"]["fusion_w_yolo"]
     if not math.isclose(fusion, 1.0, abs_tol=WEIGHT_SUM_TOLERANCE):
         raise ConfigError(f"ear.fusion_w_ear + ear.fusion_w_yolo must be 1.0, got {fusion:.4f}")
+
+    split = cfg["dataset"]["split"]
+    split_total = split["train"] + split["val"] + split["test"]
+    if not math.isclose(split_total, 1.0, abs_tol=WEIGHT_SUM_TOLERANCE):
+        raise ConfigError(f"dataset.split train+val+test must be 1.0, got {split_total:.4f}")
+
+    pre = cfg["dataset"]["preannotate"]
+    if not pre["ear_closed"] < pre["ear_open"]:
+        raise ConfigError("dataset.preannotate.ear_closed must be lower than ear_open")
 
     if cfg["privacy"].get("save_frames", False):
         raise ConfigError("privacy.save_frames must stay false: frames may never be written to disk")

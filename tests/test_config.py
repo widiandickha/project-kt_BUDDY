@@ -67,3 +67,10 @@ def test_load_from_custom_path(tmp_path: Path, cfg: dict) -> None:
 def test_resolve_path_relative_to_root() -> None:
     assert resolve_path("models/best.pt") == ROOT_DIR / "models" / "best.pt"
     assert resolve_path("/abs/x.pt") == Path("/abs/x.pt")
+
+
+def test_dataset_split_must_sum_to_one(cfg: dict) -> None:
+    bad = copy.deepcopy(cfg)
+    bad["dataset"]["split"]["test"] = 0.3
+    with pytest.raises(ConfigError, match="dataset.split"):
+        validate_config(bad)

@@ -1,0 +1,9 @@
+path: data/dataset
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: mata_tertutup
+  1: mata_terbuka
+  2: menguap
+  3: kerutan_dahi

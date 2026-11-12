@@ -11,8 +11,8 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 | Fase | Isi | Status |
 |---|---|---|
 | 1 | Setup environment, config, benchmark FPS | ✅ selesai |
-| 2 | Dataset & anotasi | ⏳ berikutnya |
-| 3 | Training YOLOv8 | – |
+| 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual & rekaman relawan |
+| 3 | Training YOLOv8 | ⏳ berikutnya |
 | 4 | Analisis & skoring | – |
 | 5 | Virtual Buddy | – |
 | 6 | Database & ringkasan harian | – |
@@ -63,20 +63,39 @@ Test:
 .venv/bin/python -m pytest
 ```
 
+### Dataset (FASE 2)
+
+Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md). Ringkasnya:
+
+```bash
+.venv/bin/python scripts/collect_data.py --relawan andi --kondisi terang     # rekam relawan (dengan persetujuan)
+.venv/bin/python scripts/import_public.py nthu --src "~/Downloads/KAGGLE/3. NTHU DDD"
+.venv/bin/python scripts/preannotate.py                                      # draf label dari landmark
+# koreksi label di Roboflow/CVAT, export YOLO ke data/annotated/
+.venv/bin/python training/split_dataset.py --src data/annotated              # split per orang + laporan
+.venv/bin/python training/augment.py                                         # augmentasi train
+.venv/bin/python training/check_dataset.py                                   # DoD: yolo val
+```
+
+Status dataset terbaru ada di [docs/dataset_report.md](docs/dataset_report.md).
+
 ## Struktur
 
 ```text
 config.yaml            # satu-satunya tempat ambang, bobot, dan parameter
 requirements.txt       # versi dipin
-docs/                  # DECISIONS.md, AUDIT_SPEC.md, (nanti) dataset_report.md, eval/
-data/raw/              # gambar mentah relawan (tidak di-commit)
+docs/                  # DECISIONS.md, AUDIT_SPEC.md, ANOTASI.md, dataset_report.md, (nanti) eval/
+data/raw/              # gambar mentah + draf label (tidak di-commit)
+data/annotated/        # hasil export tool anotasi (tidak di-commit)
 data/dataset/          # dataset format YOLO (tidak di-commit)
+data/data.yaml         # konfigurasi dataset YOLO (4 kelas)
 models/                # bobot model (tidak di-commit)
 src/
   core/                # config.py, device.py, (FASE 4/7) events.py, pipeline.py
-  capture/  detection/  analysis/  buddy/  storage/  ui/
-training/              # FASE 2–3: train.py, evaluate.py, augment.py
-scripts/               # benchmark_fps.py, (FASE 2) collect_data.py
+  detection/classes.py # urutan kelas final
+  capture/  analysis/  buddy/  storage/  ui/
+training/              # common.py, split_dataset.py, augment.py, check_dataset.py, (FASE 3) train.py, evaluate.py
+scripts/               # benchmark_fps.py, collect_data.py, import_public.py, preannotate.py
 tests/
 legacy/                # prototipe lama (referensi, tidak dijalankan)
 ```

@@ -14,10 +14,10 @@ __pycache__/
 3. NTHU DDD/
 datasets/
 data/raw/
+data/annotated/
 data/dataset/
 data/*.db
 data/*.sqlite3
-
 # Model & hasil training
 models/*.pt
 models/*.onnx
@@ -25,10 +25,8 @@ models/*.task
 models/haarcascades/
 runs/
 *.pt
-
 # Log aplikasi
 logs/
-
 # OS & editor
 .DS_Store
 .idea/

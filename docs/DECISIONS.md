@@ -31,6 +31,43 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Keputusan:** `scripts/benchmark_fps.py` punya opsi `--source <video/gambar>` dan `--no-show`. Bobot `yolov8n.pt` resmi diunduh otomatis ke `models/`.
 - **Alasan:** benchmark bisa diuji ulang tanpa kamera (CI atau mesin tanpa webcam). Mode default tetap webcam + jendela live sesuai DoD.
 
+## FASE 2
+
+### D-007 · MRL Eye tidak dipakai untuk detektor
+- **Konteks:** MRL berisi potongan satu mata (inframerah, ±80–150 px), bukan frame webcam wajah penuh. Kode lama memberinya box 90% gambar.
+- **Keputusan:** MRL tidak diimpor ke dataset detektor.
+- **Alasan:** domainnya beda dan tidak cocok dengan konvensi box D-009.
+
+### D-008 · Skema nama file mentah `<subjek>__<petunjuk>__<kondisi>__<id>`
+- **Keputusan:** semua gambar di `data/raw/` diberi nama sesuai skema ini (`training/common.py`). Contoh subjek: `self-andi`, `nthu-001`, `uta-12`.
+- **Alasan:** split per orang dan uji per kondisi (FASE 8.1) butuh identitas subjek dan kondisi. Pemisah `__` tetap utuh walaupun Roboflow menambahkan akhiran `_jpg.rf.<hash>`.
+
+### D-009 · Konvensi box
+- **Keputusan:**
+  - `mata_*`: **satu box untuk kedua mata**.
+  - `menguap`: wajah bawah, dari pangkal hidung sampai dagu, termasuk mulut.
+  - `kerutan_dahi`: dahi dan alis.
+  - Rincian lengkap ada di `docs/ANOTASI.md`.
+- **Alasan:** box satu mata di jarak 90 cm hanya sekitar 20 px, sulit untuk YOLOv8n di imgsz 480. Box gabungan lebih besar dan stabil. Kondisi satu mata terpejam jarang terjadi dan EAR per mata tetap tersedia dari MediaPipe. Dengan konvensi ini tidak ada aturan kiri/kanan, jadi horizontal flip aman dipakai.
+
+### D-010 · Overlay tercetak di NTHU-DDD dihapus
+- **Konteks:** sekitar 97% frame NTHU versi Kaggle (samymesbah) memuat kotak berwarna tercetak (wajah hijau, mata biru, mulut merah) yang sering tidak pas. Model bisa belajar mengenali garis itu, bukan wajahnya.
+- **Keputusan:** saat import, piksel berwarna (selisih kanal > `overlay_color_diff`) di-inpaint, karena frame aslinya grayscale. Pengecekan acak menunjukkan 0 frame yang masih berwarna.
+- **Catatan FASE 3:** frame NTHU grayscale, sedangkan webcam berwarna. Kesenjangan domain ini perlu ditutup dengan rekaman relawan (berwarna) dan/atau augmentasi grayscale saat training.
+
+### D-011 · Pra-anotasi dari landmark MediaPipe
+- **Keputusan:**
+  - `scripts/preannotate.py` membuat draf box: EAR < 0.18 → `mata_tertutup`, EAR > 0.24 → `mata_terbuka`, di antaranya ditandai `ragu_mata`; MAR > 0.45 → `menguap`.
+  - `kerutan_dahi` hanya diberikan dari petunjuk instruksi, karena landmark tidak bisa menilai kerutan dengan andal.
+  - Label yang sudah ada tidak pernah ditimpa tanpa `--overwrite`.
+- **Alasan:** anotasi ribuan frame dari nol terlalu lambat. Draf ini mempercepat kerja, tapi **tetap harus dikoreksi manual** sesuai spesifikasi.
+
+### D-012 · Algoritma split dan pengecekan DoD
+- **Split:** subjek utuh dibagikan secara greedy agar mendekati 70/20/10 jumlah gambar. Dengan ≥ 3 subjek, val dan test masing-masing dijamin dapat satu subjek; dengan 2 subjek, val yang dijamin. Ada `--assign` untuk memaksa subjek ke split tertentu.
+- **Augmentasi:** offline dan hanya di train (`__aug<k>`). Ultralytics tetap menjalankan augmentasi online saat training.
+- **DoD `yolo val`:** dijalankan lewat `training/check_dataset.py` dengan YOLOv8n 4 kelas tanpa bobot, agar nama kelas cocok. Metriknya ≈ 0 dan memang tidak bermakna di fase ini.
+- **Sampling NTHU:** frame-nya berurutan dari video, sehingga diambil merata per grup (subjek × kacamata × skenario). Kuota per petunjuk ada di config (`menguap` 300 agar instance menguap cukup).
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

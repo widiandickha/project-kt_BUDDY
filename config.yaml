@@ -46,3 +46,31 @@ privacy: {save_frames: false, show_camera_indicator: true}
 
 # Tambahan (bagian 7 "level dari config"), lihat docs/DECISIONS.md D-004.
 logging: {level: INFO, file: logs/app.log}
+
+# FASE 2: dataset & anotasi (lihat docs/DECISIONS.md D-007 s.d. D-012).
+dataset:
+  raw_dir: data/raw
+  out_dir: data/dataset
+  data_yaml: data/data.yaml
+  report: docs/dataset_report.md
+  split: {train: 0.7, val: 0.2, test: 0.1, seed: 42}
+  target_per_class: 500
+  min_subjects: 5
+  collect: {burst_interval_sec: 0.5, jpeg_quality: 95}
+  import:
+    # NTHU-DDD: frame berurutan dari video, jadi diambil merata per grup (subjek x kacamata x skenario).
+    nthu_per_group: {normal: 40, mengantuk: 80, kedip_lambat: 80, menguap: 300}
+    # Frame NTHU versi Kaggle memuat kotak berwarna tercetak; piksel berwarna di-inpaint (D-010).
+    overlay_color_diff: 40
+    overlay_dilate_px: 1
+    uta_every_sec: 2.0
+    uta_max_per_video: 150
+  preannotate:
+    landmarker: models/face_landmarker.task
+    ear_closed: 0.18       # EAR < ini -> mata_tertutup
+    ear_open: 0.24         # EAR > ini -> mata_terbuka; di antaranya ditandai "ragu" untuk dicek
+    mar_yawn: 0.45         # MAR bibir dalam > ini -> menguap
+    pad_eyes: 0.08         # padding tiap sisi box, relatif lebar wajah
+    pad_mouth: 0.06
+    pad_brow: 0.05
+  augment: {copies: 1, brightness: 0.25, contrast: 0.25, blur_max_kernel: 5, rotate_deg: 10, hflip_p: 0.5, seed: 42}
