@@ -92,6 +92,38 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Alasan:** mencegah angka dari label otomatis tidak sengaja masuk laporan.
 - **Catatan:** inferensi runtime memakai `inference.imgsz=480` agar lebih cepat. Selisih akurasi 640 vs 480 diukur di FASE 8 (`evaluate.py --imgsz 480`).
 
+## FASE 4
+
+### D-016 · Detektor YOLO wajah opsional
+- **Konteks:** training ditunda karena belum ada hardware yang memadai, sehingga `models/best.pt` belum ada.
+- **Keputusan:** seluruh pipeline jalan tanpa YOLO wajah.
+  - EAR (sumber utama mata) tetap dari MediaPipe.
+  - `yawn` diambil dari MAR > `landmark.mar_yawn`.
+  - `brow_furrow` diambil dari rasio alis di bawah baseline kalibrasi × (1 − `landmark.brow_drop`). Ini rencana cadangan dari risiko `kerutan_dahi`.
+  - Begitu `models/best.pt` ada, nilai confidence YOLO otomatis dipakai dan `det_available = true`.
+
+### D-017 · Tambahan pada kontrak data dan modul `engine.py`
+- **`FrameFeatures`** mendapat field tambahan `det_available`, `mar`, `brow_ratio`, dan `nose_xy`. Gunanya: fusi hanya dipakai saat YOLO tersedia, ada data mentah untuk cadangan landmark dan kalibrasi, dan posisi hidung untuk `trajectory_motion`.
+- **`StressSnapshot`** mendapat `raw_score` (sebelum EMA) dan `burnout_risk`.
+- **Dataclass baru:** `HabitAlert` dan `PresenceEvent`.
+- **`src/analysis/engine.py`** menggabungkan window, scorer, burnout, dan habit di balik `add()`/`tick()`. Modul ini dipakai oleh `replay.py` dan pipeline FASE 7, supaya logikanya hanya ada di satu tempat.
+
+### D-018 · Rumus postur dan jendela panjang
+- **`shoulder_slouch`:** spesifikasi menulis `(nose_y − mean(shoulder_y)) / lebar_bahu` dan "makin kecil = kepala makin turun". Karena sumbu y gambar mengarah ke bawah, rumus itu justru membesar saat kepala turun. Yang dipakai: `(mean(shoulder_y) − nose_y) / lebar_bahu`, yang memang mengecil saat kepala turun.
+- **`head_pitch_proxy`:** `(nose_y − mean(shoulder_y)) / tinggi_frame`.
+- **Jendela panjang 30 menit:** tidak disimpan per frame. Kebutuhannya dipenuhi oleh timer di `HabitEvaluator` (durasi 2–3 menit dan 50 menit) dan rata-rata per menit di `BurnoutTrend`, sehingga memorinya kecil.
+
+### D-019 · Detail perhitungan yang ambigu di spesifikasi
+- **Fusi mata:** sinyal EAR biner, sinyal YOLO berupa confidence, lalu dibandingkan dengan `ear.fusion_threshold` 0,5. Dengan bobot 0,6/0,4, EAR praktis menentukan saat keduanya ada, sedangkan YOLO menjadi cadangan saat EAR tidak ada.
+- **Blink abnormal:** jarak blink rate di luar rentang normal `score.blink_normal` [15, 20] per menit, dibagi 15.
+- **Motion:** rata-rata standar deviasi posisi hidung ternormalisasi, dibagi `score.norm.motion` (0,05).
+- **Menguap:** episode ≥ 1 detik dihitung sekali. Episode berikutnya yang mulai < 10 detik kemudian tidak dihitung, dan hitungan disimpan antar-tick agar tidak ganda.
+- **Skor:** dihitung bila jendela sudah berisi ≥ `score.min_window_sec` (20 detik) dan pengguna terlihat. Tidak dihitung selama `user_away`.
+- **Burnout slope:** satuannya poin per jam, dari regresi linier rata-rata bergerak 30 menit selama 4 jam terakhir. `slope_min` 0,5 diartikan 0,5 poin per jam.
+- **late_night:** jam ≥ 23 sampai < 04 dihitung sebagai satu malam, jadi alert hanya muncul sekali.
+- **good_break:** away 5–15 menit setelah kerja ≥ `habit.long_work_min` (30 menit).
+- **doing_great:** 2 jam berturut-turut di level rendah.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

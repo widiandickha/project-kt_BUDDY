@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
-import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -34,15 +33,24 @@ import numpy as np  # noqa: E402
 
 from src.core.config import load_config, resolve_path  # noqa: E402
 from src.detection.classes import CLASS_NAMES, KERUTAN_DAHI, MATA_TERBUKA, MATA_TERTUTUP, MENGUAP  # noqa: E402
+from src.detection.ear_calculator import (  # noqa: E402
+    FACE_SIDES,
+    LEFT_EYE,
+    MOUTH_CORNERS,
+    MOUTH_INNER_V,
+    RIGHT_EYE,
+    compute_ear,
+    compute_mar,
+    ensure_landmarker,
+)
 from training.common import YoloBox, iter_images, parse_raw_name, write_labels, xyxy_to_yolo  # noqa: E402
 
-LANDMARKER_URL = (
-    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
-)
-
-# MediaPipe Face Mesh indices.
-EAR_A: tuple[int, ...] = (33, 160, 158, 133, 153, 144)
-EAR_B: tuple[int, ...] = (362, 385, 387, 263, 373, 380)
+# Same EAR/MAR definitions as the runtime (src/detection/ear_calculator.py).
+EAR_A: tuple[int, ...] = RIGHT_EYE
+EAR_B: tuple[int, ...] = LEFT_EYE
+ear_of = compute_ear
+mar_of = compute_mar
+_ = (MOUTH_CORNERS, MOUTH_INNER_V, FACE_SIDES)  # re-exported for tests
 EYES: tuple[int, ...] = (
     33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
     362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398,
@@ -52,9 +60,6 @@ BROW_FOREHEAD: tuple[int, ...] = (
     70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 336, 296, 334, 293, 300, 285, 295, 282, 283, 276,
     10, 109, 338, 67, 297, 151,
 )
-MOUTH_INNER_V: tuple[int, int] = (13, 14)
-MOUTH_CORNERS: tuple[int, int] = (78, 308)
-FACE_SIDES: tuple[int, int] = (234, 454)
 
 
 @dataclass
@@ -78,23 +83,6 @@ class Annotation:
     mar: float | None = None
     boxes: list[YoloBox] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
-
-
-def ear_of(pts: np.ndarray, idx: tuple[int, ...]) -> float:
-    """Eye aspect ratio from 6 landmarks (p1..p6)."""
-    p1, p2, p3, p4, p5, p6 = (pts[i] for i in idx)
-    horiz = float(np.linalg.norm(p1 - p4))
-    if horiz < 1e-6:
-        return 0.0
-    return float((np.linalg.norm(p2 - p6) + np.linalg.norm(p3 - p5)) / (2.0 * horiz))
-
-
-def mar_of(pts: np.ndarray) -> float:
-    """Inner-lip mouth aspect ratio."""
-    horiz = float(np.linalg.norm(pts[MOUTH_CORNERS[0]] - pts[MOUTH_CORNERS[1]]))
-    if horiz < 1e-6:
-        return 0.0
-    return float(np.linalg.norm(pts[MOUTH_INNER_V[0]] - pts[MOUTH_INNER_V[1]]) / horiz)
 
 
 def region_box(pts: np.ndarray, idx: tuple[int, ...], pad: float, face_w: float, cls: int, w: int, h: int) -> YoloBox | None:
@@ -142,15 +130,6 @@ def annotate_points(pts: np.ndarray, width: int, height: int, hint: str, th: Thr
     if hint == "mata_tertutup" and eye_cls != MATA_TERTUTUP:
         ann.flags.append("hint_tertutup_ear_terbuka")
     return ann
-
-
-def ensure_landmarker(path: Path) -> Path:
-    """Download the official MediaPipe face landmarker model if it is missing."""
-    if not path.exists():
-        print(f"Mengunduh model MediaPipe ke {path} ...")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(LANDMARKER_URL, path)  # noqa: S310 (fixed official URL)
-    return path
 
 
 class LandmarkDetector:

@@ -13,7 +13,7 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 | 1 | Setup environment, config, benchmark FPS | ✅ selesai |
 | 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual & rekaman relawan |
 | 3 | Training YOLOv8, evaluasi, demo detektor | ✅ pipeline selesai · ⏳ training ulang setelah label final |
-| 4 | Analisis & skoring | ⏳ berikutnya |
+| 4 | Analisis & skoring (EAR, PERCLOS, skor, hysteresis, burnout, habit, replay) | ✅ selesai |
 | 5 | Virtual Buddy | – |
 | 6 | Database & ringkasan harian | – |
 | 7 | Integrasi | – |
@@ -90,6 +90,15 @@ Status dataset terbaru ada di [docs/dataset_report.md](docs/dataset_report.md).
 
 Hasil evaluasi terbaru ada di [docs/eval/metrics.md](docs/eval/metrics.md). Selama label masih draf, angka di sana bukan untuk laporan.
 
+### Analisis (FASE 4)
+
+```bash
+.venv/bin/python -m src.analysis.replay --file data/samples/sample.jsonl   # skor per detik dari fitur rekaman
+.venv/bin/python -m src.analysis.replay --make-sample data/samples/sample.jsonl
+```
+
+Tanpa `models/best.pt`, mata/menguap/kerutan diambil dari landmark MediaPipe (D-016).
+
 ## Struktur
 
 ```text
@@ -102,9 +111,10 @@ data/dataset/          # dataset format YOLO (tidak di-commit)
 data/data.yaml         # konfigurasi dataset YOLO (4 kelas)
 models/                # bobot model (tidak di-commit)
 src/
-  core/                # config.py, device.py, (FASE 4/7) events.py, pipeline.py
-  detection/           # classes.py (urutan kelas final), face_detector.py (+ --demo)
-  capture/  analysis/  buddy/  storage/  ui/
+  core/                # config.py, device.py, events.py, (FASE 7) pipeline.py
+  detection/           # classes.py, face_detector.py (+ --demo), ear_calculator.py, pose_estimator.py
+  analysis/            # feature_extractor, sliding_window, stress_scorer, burnout_trend, habit_evaluator, calibration, engine, replay
+  capture/  buddy/  storage/  ui/
 training/              # common.py, split_dataset.py, augment.py, check_dataset.py, train.py, evaluate.py
 scripts/               # benchmark_fps.py, collect_data.py, import_public.py, preannotate.py
 tests/

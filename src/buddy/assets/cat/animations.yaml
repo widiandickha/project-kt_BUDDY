@@ -1,0 +1,107 @@
+canvas_size: 512
+anchor: bottom_center
+default_state: idle
+animations:
+  idle:
+    pose: idle.png
+    mode: static_pose
+    transform: breathe
+    overlay: null
+    loop: true
+    duration_ms: 2400
+    crossfade_ms: 150
+  happy:
+    pose: happy.png
+    mode: static_pose
+    transform: bounce
+    overlay: sparkle
+    loop: false
+    duration_ms: 1200
+    crossfade_ms: 150
+    next: idle
+  sleepy:
+    pose: sleepy.png
+    mode: static_pose
+    transform: nod
+    overlay: null
+    loop: true
+    duration_ms: 3000
+    crossfade_ms: 150
+  worried:
+    pose: worried.png
+    mode: static_pose
+    transform: sway
+    overlay: sweat
+    loop: true
+    duration_ms: 1800
+    crossfade_ms: 150
+  alert:
+    pose: alert.png
+    mode: static_pose
+    transform: pop
+    overlay: exclaim
+    loop: false
+    duration_ms: 1500
+    crossfade_ms: 150
+    next: idle
+  concerned:
+    pose: concerned.png
+    mode: static_pose
+    transform: breathe
+    overlay: null
+    loop: true
+    duration_ms: 2600
+    crossfade_ms: 150
+  stretch:
+    pose: stretch.png
+    mode: static_pose
+    transform: stretch
+    overlay: null
+    loop: false
+    duration_ms: 2000
+    crossfade_ms: 150
+    next: idle
+  curious:
+    pose: curious.png
+    mode: static_pose
+    transform: tilt
+    overlay: question
+    loop: false
+    duration_ms: 1600
+    crossfade_ms: 150
+    next: idle
+  eye_care:
+    pose: eye_care.png
+    mode: static_pose
+    transform: slow_blink
+    overlay: null
+    loop: false
+    duration_ms: 2200
+    crossfade_ms: 150
+    next: idle
+  sleeping:
+    pose: sleeping.png
+    mode: static_pose
+    transform: breathe_slow
+    overlay: zzz
+    loop: true
+    duration_ms: 4000
+    crossfade_ms: 150
+  wake_greet:
+    pose: wake_greet.png
+    mode: static_pose
+    transform: wave
+    overlay: null
+    loop: false
+    duration_ms: 1800
+    crossfade_ms: 150
+    next: idle
+  celebrate:
+    pose: celebrate.png
+    mode: static_pose
+    transform: bounce
+    overlay: confetti
+    loop: false
+    duration_ms: 2000
+    crossfade_ms: 150
+    next: idle
