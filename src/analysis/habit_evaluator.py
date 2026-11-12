@@ -94,6 +94,11 @@ class HabitEvaluator:
             if f.face_size_ratio is not None:
                 self._face_size = f.face_size_ratio
 
+    def reset_presence(self) -> None:
+        """Forget presence after a pause (pausing the camera is not 'leaving the desk')."""
+        self._last_seen = None
+        self._away_since = None
+
     @property
     def away(self) -> bool:
         """True while the user is considered away."""

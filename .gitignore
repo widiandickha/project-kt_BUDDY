@@ -31,3 +31,5 @@ logs/
 .DS_Store
 .idea/
 .vscode/
+data/settings.yaml
+logs/*.log

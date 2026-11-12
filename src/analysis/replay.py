@@ -38,17 +38,23 @@ def read_features(path: Path) -> Iterator[FrameFeatures]:
                 yield FrameFeatures.from_dict(json.loads(line))
 
 
+def _round(v, nd: int = 3):
+    """Round floats, recursively inside lists."""
+    if isinstance(v, float):
+        return round(v, nd)
+    if isinstance(v, list):
+        return [_round(x, nd) for x in v]
+    return v
+
+
 def compact(d: dict) -> dict:
-    """Drop default-valued fields (FrameFeatures.from_dict restores them) and round floats."""
+    """Drop default-valued fields (FrameFeatures.from_dict restores them) and round floats
+    (keypoint pixels to 1 decimal, everything else to 3)."""
     out = {}
     for k, v in d.items():
         if k not in REQUIRED_KEYS and (v is None or v is False or v == 0.0):
             continue
-        if isinstance(v, float):
-            v = round(v, 3)
-        elif isinstance(v, list):
-            v = [round(x, 4) if isinstance(x, float) else x for x in v]
-        out[k] = v
+        out[k] = _round(v, 1 if k == "pose_keypoints" else 3)
     return out
 
 

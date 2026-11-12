@@ -30,7 +30,9 @@ REQUIRED_SECTIONS: tuple[str, ...] = (
     "landmark",
     "calibration",
     "health",
+    "runtime",
 )
+USER_SETTINGS_PATH: Path = ROOT_DIR / "data" / "settings.yaml"
 
 WEIGHT_SUM_TOLERANCE: float = 1e-6
 
@@ -88,3 +90,30 @@ def resolve_path(relative: str | Path) -> Path:
     """Resolve a config path (e.g. models/best.pt) against the project root."""
     p = Path(relative)
     return p if p.is_absolute() else ROOT_DIR / p
+
+
+def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into a copy of base."""
+    out = dict(base)
+    for k, v in override.items():
+        out[k] = deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def load_app_config(path: Path | str | None = None, settings_path: Path | None = None) -> dict[str, Any]:
+    """config.yaml + the user's saved settings (data/settings.yaml), validated (D-024)."""
+    cfg = load_config(path)
+    sp = settings_path or USER_SETTINGS_PATH
+    if sp.exists():
+        override = yaml.safe_load(sp.read_text(encoding="utf-8")) or {}
+        cfg = deep_merge(cfg, override)
+        validate_config(cfg)
+    return cfg
+
+
+def save_user_settings(changes: dict[str, Any], settings_path: Path | None = None) -> None:
+    """Merge `changes` into data/settings.yaml (config.yaml itself is never rewritten)."""
+    sp = settings_path or USER_SETTINGS_PATH
+    current = (yaml.safe_load(sp.read_text(encoding="utf-8")) or {}) if sp.exists() else {}
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text(yaml.safe_dump(deep_merge(current, changes), sort_keys=False, allow_unicode=True), encoding="utf-8")

@@ -16,7 +16,7 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase. Prototipe lama t
 | 4 | Analisis & skoring (EAR, PERCLOS, skor, hysteresis, burnout, habit, replay) | ✅ selesai |
 | 5 | Virtual Buddy (12 ekspresi, sprite player, state machine, saran, debug panel) | ✅ selesai |
 | 6 | Database, ringkasan harian, dashboard, ekspor CSV | ✅ selesai |
-| 7 | Integrasi | – |
+| 7 | Integrasi (thread kamera/inferensi, tray, kalibrasi, pengaturan, `src.main`) | ✅ selesai |
 | 8 | Pengujian | – |
 | 9 | Laporan & demo | – |
 
@@ -39,6 +39,24 @@ python3.11 -m venv .venv
 ```
 
 ## Menjalankan
+
+### Aplikasi lengkap
+
+```bash
+.venv/bin/python -m src.main
+```
+
+Saat pertama kali dijalankan, muncul disclaimer lalu wizard kalibrasi 20 detik. Kucing duduk di bawah layar, dan ikon tray menunjukkan status kamera (titik merah = kamera aktif). Kamera bisa dijeda dari tray atau lewat klik kanan pada kucing → "Jeda 30 menit".
+
+Opsi:
+
+| Opsi | Fungsi |
+|---|---|
+| `--source video.mp4` atau `--source folder/` | pakai video atau folder gambar, bukan webcam |
+| `--record-features rek.jsonl` | rekam fitur angka (tanpa gambar) untuk replay dan uji event |
+| `--seconds 60 --skip-intro` | uji otomatis tanpa dialog |
+
+### Benchmark & tool lain
 
 Benchmark FPS (webcam + `yolov8n.pt` pretrained, 30 detik, jendela live dengan kotak orang dan angka FPS; tekan `q` untuk keluar):
 

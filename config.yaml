@@ -2,9 +2,11 @@
 # Semua ambang batas, bobot, dan parameter berada di sini (aturan 0 spesifikasi).
 # Isi awal mengikuti bagian 10 + Lampiran A.7; tambahan dicatat di docs/DECISIONS.md.
 
-camera: {index: 0, width: 640, height: 480, fps: 30}
+camera: {index: 0, width: 640, height: 480, fps: 30, retry_sec: 5}  # retry_sec: kamera hilang/dipakai app lain
 
 inference: {imgsz: 480, target_fps: 12, performance_mode: false, device: auto}
+# Integrasi (FASE 7, D-024): frame skip adaptif bila FPS < min_fps; performance_mode = pose tiap 3 frame, deteksi tiap 2.
+runtime: {queue_size: 2, min_fps: 8, perf_pose_every: 3, perf_det_every: 2, max_pose_every: 3, max_det_every: 2, restart_after_errors: 5}
 
 det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true}  # grayscale: D-013
 

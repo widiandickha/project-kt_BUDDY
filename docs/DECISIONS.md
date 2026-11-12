@@ -175,6 +175,30 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **health_score:** `100 − avg × 0,5 − 5/jam kerja melebihi 50 menit tanpa jeda − 2 per 10 menit postur buruk + 3 per good_break (maks 15)`, di-clamp ke 0..100. Semua koefisien ada di `config.health`.
 - **Grafik dashboard:** memakai matplotlib (`backend_qtagg`) agar tidak menambah dependensi baru.
 
+## FASE 7
+
+### D-024 · Integrasi runtime
+- **Thread:**
+  - A: `CaptureThread`, antrean 2 frame yang membuang frame lama.
+  - B: `InferenceThread`. Model MediaPipe dan YOLO dibuat di dalam thread ini.
+  - Tick analisis 1 detik berjalan di **main thread** lewat `QTimer` (spesifikasi membolehkan thread C *atau* timer). Dengan begitu Buddy, database, dan dashboard tidak butuh sinkronisasi tambahan.
+- **Jeda vs fullscreen:**
+  - "Jeda" melepas perangkat kamera (lampu kamera mati) dan menghentikan inferensi.
+  - Fullscreen hanya menghentikan inferensi; kamera tetap terbuka agar bisa lanjut cepat.
+  - Setelah jeda, status kehadiran di-reset, jadi menjeda tidak dihitung sebagai `user_away`.
+- **Ketahanan:**
+  - Kamera hilang atau dipakai aplikasi lain → dicoba lagi tiap `camera.retry_sec`, kucing tidur, dan tooltip tray memberi tahu.
+  - Error inferensi berturut-turut ≥ `runtime.restart_after_errors` → model dimuat ulang.
+  - Thread inferensi mati → dijalankan ulang oleh watchdog di tick.
+  - Saat keluar: thread dihentikan, ringkasan hari ini ditulis, database di-flush.
+- **Performa:**
+  - FPS < `runtime.min_fps` → pose dijalankan tiap 2–3 frame, lalu deteksi YOLO tiap 2 frame; kembali normal bila FPS pulih.
+  - `inference.performance_mode` memaksa pose tiap 3 dan deteksi tiap 2 frame.
+- **Pengaturan pengguna:** disimpan di `data/settings.yaml` (overlay di atas `config.yaml`, di-ignore git), sehingga `config.yaml` beserta komentarnya tidak pernah ditulis ulang oleh aplikasi.
+- **Log:** `logs/app.log` berputar (1 MB × 3), tanpa data sensitif.
+- **Opsi uji:** `--record-features` menyimpan FrameFeatures (angka saja) untuk replay dan uji event FASE 8. `--source` menerima file video atau folder gambar.
+- **Packaging PyInstaller:** opsional di spesifikasi dan belum dibuat.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:
