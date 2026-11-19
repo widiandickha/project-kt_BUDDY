@@ -89,3 +89,36 @@ def test_extract_frames_and_import_uta(imp, tmp_path: Path) -> None:
     out = sorted((raw / "uta-3" / "drowsy").glob("*.jpg"))
     assert len(out) == 3
     assert cv2.imread(str(out[0])).shape[:2] == (360, 640)
+
+
+def test_import_folder_per_person(imp, tmp_path: Path) -> None:
+    from training.common import parse_raw_name
+
+    src = tmp_path / "incoming"
+    (src / "Rina A").mkdir(parents=True)
+    (src / "r02").mkdir()
+    cv2.imwrite(str(src / "Rina A" / "IMG_1.png"), np.full((960, 1280, 3), 120, np.uint8))
+    cv2.imwrite(str(src / "Rina A" / "IMG_2.jpg"), np.full((480, 640, 3), 90, np.uint8))
+    (src / "Rina A" / "catatan.txt").write_text("bukan gambar")
+    video = src / "r02" / "dahi.avi"
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (640, 480))
+    for i in range(30):
+        writer.write(np.full((480, 640, 3), i * 5, dtype=np.uint8))
+    writer.release()
+    cv2.imwrite(str(src / "lepas.jpg"), np.zeros((100, 100, 3), np.uint8))
+
+    raw = tmp_path / "raw"
+    counts = imp.import_folder(src, raw, "kerutan_dahi", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
+    assert counts == {"ext-rina-a": 2, "ext-r02": 2, "ext-lain": 1}
+    files = sorted((raw / "ext-rina-a" / "kerutan_dahi").glob("*.jpg"))
+    assert len(files) == 2 and cv2.imread(str(files[0])).shape[1] == 640
+    meta = parse_raw_name(files[0])
+    assert (meta.subject, meta.hint, meta.condition) == ("ext-rina-a", "kerutan_dahi", "terang")
+    # idempotent: running again does not duplicate files
+    imp.import_folder(src, raw, "kerutan_dahi", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
+    assert len(list(raw.rglob("*.jpg"))) == 5
+
+
+def test_import_folder_empty_explains(imp, tmp_path: Path) -> None:
+    with pytest.raises(SystemExit, match="kode_orang"):
+        imp.import_folder(tmp_path, tmp_path / "raw", "kerutan_dahi", "x", "lain", 1.0, 2, 640)

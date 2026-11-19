@@ -237,6 +237,28 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **`docs/LAPORAN.md`:** memetakan setiap bab laporan ke file di repo, dan berisi keterbatasan, etika & privasi, serta skenario demo 5 menit (termasuk cadangan tanpa webcam).
 - **Video demo:** tidak dibuat di repo, karena harus direkam pengguna dan tanpa wajah orang lain tanpa izin.
 
+## Pembaruan setelah FASE 9
+
+### D-027 · Sprite kucing final
+- **Keputusan:** sprite placeholder dari Lampiran B diganti dengan ilustrasi vektor orisinal (kucing oranye bergaris, gaya stiker) yang digambar dengan QPainter oleh `scripts/generate_cat_sprites.py`.
+- **Kontrak tetap sama:** 12 PNG RGBA 512×512, kaki di bawah-tengah, dan nama file sama dengan nama state. Jadi `animations.yaml`, transform, dan overlay kode tidak berubah.
+- **Pose:** kepala selalu di separuh atas kanvas, sesuai asumsi overlay. `stretch` dan `sleeping` memakai pose rebah. `wake_greet` dan `celebrate` mengangkat kaki depan.
+- **Alasan:** gambar dari internet berisiko hak cipta. Script ini bisa diulang, dan PNG-nya tetap bisa ditimpa gambar sendiri.
+
+### D-028 · Tata letak dashboard
+- **Keputusan:** dashboard memakai kartu dalam area yang bisa di-scroll, dengan susunan:
+  - Kartu utama: kucing beserta kalimat sesuai kondisi hari itu, rata-rata stres, dan label level.
+  - Cincin health score.
+  - Enam kartu statistik.
+  - Tiga grafik di kartu terpisah. Grafik per jam memberi warna latar sesuai zona level.
+  - Insight dalam bentuk kartu.
+  - Navigasi tanggal: ‹ › dan "Hari ini".
+- **Alasan:** status hari itu langsung terbaca, dan Buddy menjadi wajah dashboard. Isi data dan ekspor CSV tidak berubah.
+
+### D-029 · Impor folder milik sendiri
+- **Keputusan:** `import_public.py folder` mengimpor foto/video dari `data/incoming/<kelas>/<kode_orang>/` (default kelas `kerutan_dahi`) ke `data/raw/ext-<kode>/<kelas>/`. Kelas dipakai sebagai petunjuk untuk pra-anotasi.
+- **Alasan:** `kerutan_dahi` tidak tersedia di dataset publik mana pun. Satu folder per orang menjaga split per subjek tetap berlaku.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

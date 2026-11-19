@@ -24,6 +24,20 @@ check_dataset.py                    ->  DoD: yolo val jalan di semua split
 - Variasi wajib: cahaya terang, redup, dan backlight; dengan dan tanpa kacamata; jarak 40–90 cm; sudut kepala ringan; latar yang berbeda.
 - Target: 500 instance per kelas dari minimal 5 orang.
 
+**Foto/video sendiri, terutama `kerutan_dahi`.** Tidak ada dataset publik yang punya kelas ini, jadi datanya harus dikumpulkan sendiri. Selain `collect_data.py`, kamu bisa memakai foto atau video dari HP:
+
+1. Taruh file di `data/incoming/kerutan_dahi/<kode_orang>/`, misalnya `data/incoming/kerutan_dahi/r01/*.jpg` atau `.../r02/dahi.mp4`. Satu folder untuk satu orang, karena split dibagi per orang. Gunakan kode, bukan nama, dan pastikan setiap orang sudah menandatangani persetujuan.
+2. Jalankan:
+
+   ```bash
+   .venv/bin/python scripts/import_public.py folder                       # default: kelas kerutan_dahi
+   .venv/bin/python scripts/import_public.py folder --kondisi redup      # tag kondisi untuk uji ketahanan
+   .venv/bin/python scripts/import_public.py folder --kelas menguap --src ~/Desktop/menguap
+   ```
+
+   Gambar disalin ke `data/raw/ext-<kode>/kerutan_dahi/` dan diperkecil ke lebar kamera. Untuk video, diambil 1 frame tiap `dataset.import.uta_every_sec` detik. Folder `data/incoming/` tidak ikut ke git.
+3. Isi yang bagus: dahi berkerut atau alis menegang yang **jelas terlihat**, wajah menghadap kamera dari jarak 40–90 cm, dari minimal 3–5 orang, sekitar 100–150 frame per orang per kondisi. Selipkan juga foto wajah netral dari orang yang sama, supaya model belajar membedakan.
+
 **Dataset publik:**
 
 ```bash

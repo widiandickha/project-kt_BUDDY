@@ -91,6 +91,7 @@ Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md).
 .venv/bin/python scripts/collect_data.py --relawan andi --kondisi terang     # rekam relawan (dengan persetujuan)
 .venv/bin/python scripts/import_public.py nthu --src "~/Downloads/KAGGLE/3. NTHU DDD"
 .venv/bin/python scripts/import_public.py uta --src "/path/ke/uta-rldd"
+.venv/bin/python scripts/import_public.py folder                             # foto/video kerutan_dahi dari data/incoming/kerutan_dahi/<orang>/
 .venv/bin/python scripts/preannotate.py                                      # draf label dari landmark
 # koreksi label di Roboflow/CVAT, export YOLO ke data/annotated/
 .venv/bin/python training/split_dataset.py --src data/annotated              # split per orang + laporan
@@ -113,10 +114,10 @@ Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md).
 .venv/bin/python -m src.analysis.replay --file data/samples/sample.jsonl   # skor per detik dari fitur rekaman
 .venv/bin/python -m src.buddy.demo                                         # kucing + debug panel (12 ekspresi, semua event)
 .venv/bin/python -m src.ui.dashboard --demo-data                           # dashboard dengan 7 hari data dummy
-.venv/bin/python scripts/generate_placeholder_sprites.py                   # sprite placeholder (tidak menimpa)
+.venv/bin/python scripts/generate_cat_sprites.py                           # gambar ulang 12 sprite kucing (vektor)
 ```
 
-Ganti sprite dengan menimpa `src/buddy/assets/cat/<ekspresi>.png` (PNG RGBA 512×512, kaki di bawah-tengah). Tidak perlu mengubah kode. Bank saran ada di `src/buddy/assets/advice_id.yaml`.
+Sprite kucing (oranye bergaris, gaya stiker) dibuat oleh `scripts/generate_cat_sprites.py`, lalu pratinjaunya disimpan di `src/buddy/assets/cat/_preview_sheet.png`. Kalau mau memakai gambar sendiri, cukup timpa `src/buddy/assets/cat/<ekspresi>.png` (PNG RGBA 512×512, kaki di bawah-tengah) tanpa perlu mengubah kode. Bank saran ada di `src/buddy/assets/advice_id.yaml`.
 
 ### Pengujian (FASE 8)
 
@@ -164,7 +165,8 @@ src/
   ui/                  # tray, dashboard, calibration_wizard, settings_dialog, theme
 training/              # common, split_dataset, augment, check_dataset, train, evaluate, evaluate_robustness
 scripts/               # benchmark_fps, collect_data, import_public, preannotate, generate_placeholder_sprites,
-                       # scenario_session, eval_events, analyze_questionnaire, make_report_assets
+                       # scenario_session, eval_events, analyze_questionnaire, make_report_assets,
+                       # generate_cat_sprites
 tests/                 # pytest (Qt dijalankan offscreen)
 legacy/                # prototipe lama (referensi, tidak dijalankan)
 ```

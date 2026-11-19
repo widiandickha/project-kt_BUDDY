@@ -4,6 +4,13 @@
 Usage:
     python scripts/import_public.py nthu --src "~/Downloads/KAGGLE/3. NTHU DDD"
     python scripts/import_public.py uta  --src "/Volumes/Data/uta-reallife-drowsiness-dataset"
+    python scripts/import_public.py folder                          # data/incoming/kerutan_dahi/<orang>/...
+    python scripts/import_public.py folder --kelas menguap --src ~/Desktop/menguap --kondisi redup
+
+Folder (your own photos/videos, e.g. kerutan_dahi which no public dataset has): put one sub-folder
+per person, ``<src>/<kode_orang>/*.jpg|png|mp4``, so the split stays per person. Images are copied
+(resized to the camera width) and videos are sampled every ``dataset.import.uta_every_sec``; the
+class becomes the file-name hint that scripts/preannotate.py uses for the draft box.
 
 NTHU-DDD multi-class (Kaggle samymesbah): consecutive 640x480 video frames named
 ``<subject>_<glasses|noglasses>_<scenario>_<frame>_<drowsy|notdrowsy>.jpg``. Frames are taken
@@ -35,6 +42,7 @@ import cv2  # noqa: E402
 import numpy as np  # noqa: E402
 
 from src.core.config import load_config, resolve_path  # noqa: E402
+from src.detection.classes import CLASS_NAMES  # noqa: E402
 from training.common import make_raw_name, slug  # noqa: E402
 
 NTHU_FOLDER_HINT: dict[str, str] = {
@@ -193,12 +201,61 @@ def import_uta(src: Path, raw_dir: Path, every_sec: float, max_frames: int, widt
     return counts
 
 
+IMAGE_EXTS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".webp"})
+INCOMING_DIR = "data/incoming"
+
+
+def folder_subject(path: Path, src: Path, fallback: str) -> str:
+    """Person code = first sub-folder under src (files directly in src use `fallback`)."""
+    rel = path.relative_to(src)
+    return f"ext-{slug(rel.parts[0])}" if len(rel.parts) > 1 else f"ext-{slug(fallback)}"
+
+
+def import_folder(
+    src: Path, raw_dir: Path, kelas: str, condition: str, fallback_subject: str,
+    every_sec: float, max_frames: int, width: int,
+) -> Counter[str]:
+    """Copy own images/videos of one class into data/raw/; returns counts per subject."""
+    files = sorted(p for p in src.rglob("*") if p.is_file() and not p.name.startswith(".")
+                   and p.suffix.lower() in IMAGE_EXTS | VIDEO_EXTS)
+    if not files:
+        raise SystemExit(f"Tidak ada gambar/video di {src}. Taruh file di {src}/<kode_orang>/.")
+    counts: Counter[str] = Counter()
+    for i, f in enumerate(files):
+        subj = folder_subject(f, src, fallback_subject)
+        out_dir = raw_dir / subj / kelas
+        stem = slug(f.stem)[:40]
+        if f.suffix.lower() in VIDEO_EXTS:
+            frames = ((f"{stem}-{pos:06d}", frame) for pos, frame in extract_frames(f, every_sec, max_frames))
+        else:
+            img = cv2.imread(str(f))
+            if img is None:
+                print(f"  lewati (tidak terbaca): {f.relative_to(src)}")
+                continue
+            frames = iter([(f"{stem}-{i:05d}", img)])
+        for frame_id, frame in frames:
+            dst = out_dir / make_raw_name(subj, kelas, condition, frame_id)
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(str(dst), resize_to_width(frame, width), [cv2.IMWRITE_JPEG_QUALITY, 95])
+            counts[subj] += 1
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("dataset", choices=("nthu", "uta"))
-    ap.add_argument("--src", required=True, type=lambda s: Path(s).expanduser(), help="folder dataset hasil unduh Kaggle")
+    ap.add_argument("dataset", choices=("nthu", "uta", "folder"))
+    ap.add_argument("--src", type=lambda s: Path(s).expanduser(),
+                    help="folder dataset (Kaggle); untuk 'folder' default data/incoming/<kelas>")
+    ap.add_argument("--kelas", default="kerutan_dahi", choices=CLASS_NAMES, help="folder: kelas isi folder")
+    ap.add_argument("--kondisi", default="unknown", help="folder: tag kondisi (terang, redup, kacamata, ...)")
+    ap.add_argument("--subjek", default="lain", help="folder: kode orang untuk file yang tidak di sub-folder")
     args = ap.parse_args(argv)
+    if args.src is None:
+        if args.dataset != "folder":
+            ap.error("--src wajib untuk nthu/uta")
+        args.src = resolve_path(f"{INCOMING_DIR}/{args.kelas}")
 
     cfg = load_config()
     ds = cfg["dataset"]
@@ -208,6 +265,12 @@ def main(argv: list[str] | None = None) -> int:
         counts = import_nthu(
             args.src, raw_dir, imp["nthu_per_group"], int(imp["overlay_color_diff"]), int(imp["overlay_dilate_px"])
         )
+    elif args.dataset == "folder":
+        counts = import_folder(
+            args.src, raw_dir, args.kelas, args.kondisi, args.subjek, float(ds["import"]["uta_every_sec"]),
+            int(ds["import"]["uta_max_per_video"]), int(cfg["camera"]["width"]),
+        )
+        print("Lanjut: python scripts/preannotate.py, lalu koreksi box di Roboflow/CVAT (docs/ANOTASI.md).")
     else:
         counts = import_uta(
             args.src, raw_dir, float(ds["import"]["uta_every_sec"]),
