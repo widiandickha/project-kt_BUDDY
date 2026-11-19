@@ -83,6 +83,12 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
   - Ultralytics memaksa `workers=0` di MPS.
   - Kecepatannya sekitar 4 menit per epoch untuk 5.114 gambar train (2.557 asli + 2.557 augmentasi).
 - **Status (12 Nov 2026):** run pertama dengan label draf dihentikan atas permintaan setelah 2 epoch (val mAP50 0,90 → 0,86). Angka tinggi ini wajar karena label draf berasal dari aturan MediaPipe yang mudah ditiru. Checkpoint ada di `runs/detect/face/` (bisa dilanjutkan dengan `--resume`). `models/best.pt` belum dibuat, sehingga DoD FASE 3 belum terpenuhi.
+- **Model v1 (19 Nov 2026):** dilatih ulang dari awal di RTX 3050 (bantuan teman, `dataset_v1_draf`, label draf) mengikuti `docs/PANDUAN_TRAINING.md`.
+  - Berhenti otomatis di epoch 30 (patience 20) setelah 53 menit. Epoch terbaik 10.
+  - Hasil di split test (nthu-006) direproduksi sama persis di M4: mAP50 0,853 (mata_terbuka 0,95, menguap 0,85 dengan hanya 9 instance, mata_tertutup 0,76).
+  - Kelemahan utama: 78 dari 192 mata terbuka diprediksi tertutup (subjek uji berkacamata). `kerutan_dahi` tidak bisa dideteksi karena belum ada datanya.
+  - Bobot ada di `models/best.pt`, run di `runs/detect/face_rtx3050/`. Aplikasi otomatis memakainya. Fusi mata tetap 0,6 EAR + 0,4 YOLO, jadi YOLO saja tidak cukup untuk memicu "mata tertutup".
+  - Ini **model sementara**, bukan untuk Bab IV. Model final dilatih setelah label dikoreksi dan rekaman relawan masuk.
 - **Catatan:** beberapa operasi MPS tidak punya implementasi deterministik (muncul peringatan), sehingga hasil bisa sedikit berbeda antar-run. Untuk run final, GPU CUDA atau Google Colab lebih cepat; caranya cukup `--device cuda`.
 
 ### D-015 · Evaluasi dan status label

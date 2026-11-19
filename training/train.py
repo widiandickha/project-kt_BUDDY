@@ -74,6 +74,13 @@ def build_train_kwargs(cfg: dict[str, Any], args: argparse.Namespace, device: st
     return kwargs
 
 
+def _best_epoch(trainer: Any) -> int | None:
+    """Epoch (1-based, as in results.csv) that produced best.pt; Ultralytics keeps it on the stopper."""
+    stopper = getattr(trainer, "stopper", None)
+    epoch = getattr(stopper, "best_epoch", None)
+    return None if epoch is None else int(epoch) + 1
+
+
 def copy_best(best: Path, models_dir: Path) -> Path:
     """Copy best.pt to models/best.pt, keeping the previous one as best.prev.pt."""
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -119,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
             "device": device,
             "duration_min": round((time.time() - started) / 60.0, 1),
             "train_kwargs": kwargs,
-            "best_epoch": getattr(model.trainer, "best_epoch", None),
+            "best_epoch": _best_epoch(model.trainer),
         }
         (save_dir / "run_meta.json").write_text(json.dumps(meta, indent=2, default=str), encoding="utf-8")
 

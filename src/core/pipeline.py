@@ -56,6 +56,7 @@ def default_models(cfg: dict[str, Any]) -> Models:
         from src.detection.face_detector import FaceDetector
 
         face = FaceDetector(cfg)
+        logger.info("YOLO wajah dipakai: %s", cfg["det"]["model"])
     else:
         logger.info("models/best.pt belum ada: memakai landmark MediaPipe saja (D-016)")
     return Models(EarCalculator(cfg), PoseEstimator(cfg), face)

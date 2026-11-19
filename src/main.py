@@ -144,7 +144,8 @@ class App(QObject):
             QTimer.singleShot(1500, self.show_calibration)
         if self.args.seconds:
             QTimer.singleShot(int(self.args.seconds * 1000), self.quit)
-        logger.info("Stress Buddy berjalan (YOLO wajah: %s)", "ya" if self.pipeline.inference.det_available else "belum")
+        # Models load inside the inference thread, so YOLO availability is logged there (default_models).
+        logger.info("Stress Buddy berjalan")
 
     # -- periodic -----------------------------------------------------------------------------
     def tick(self) -> None:

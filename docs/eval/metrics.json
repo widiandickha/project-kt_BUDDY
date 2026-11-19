@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "evaluated_at": "2026-11-19 09:57",
+    "weights": "runs/detect/face_rtx3050/weights/best.pt",
+    "split": "test",
+    "subjects": [
+      "nthu-006"
+    ],
+    "imgsz": 640,
+    "device": "mps",
+    "grayscale": true,
+    "label_status": "draf",
+    "speed_ms": {
+      "preprocess": 0.152194543353034,
+      "inference": 1.7738829390103963,
+      "loss": 5.680942077109282e-05,
+      "postprocess": 5.949358510903733
+    },
+    "train": {
+      "base_model": "yolov8n.pt",
+      "best_epoch": 10,
+      "duration_min": 53.2,
+      "device": "cuda"
+    }
+  },
+  "overall": {
+    "precision": 0.7798754504247235,
+    "recall": 0.8258465845738988,
+    "map50": 0.8527336843312203,
+    "map50_95": 0.6170059372693938
+  },
+  "classes": [
+    {
+      "name": "mata_tertutup",
+      "instances": 86,
+      "precision": 0.4255879216922186,
+      "recall": 1.0,
+      "map50": 0.7600016126001566,
+      "map50_95": 0.5659311979433693,
+      "meets_target": false
+    },
+    {
+      "name": "mata_terbuka",
+      "instances": 192,
+      "precision": 0.9140384295819522,
+      "recall": 0.7395833333333334,
+      "map50": 0.949866107060171,
+      "map50_95": 0.7183842329124313,
+      "meets_target": true
+    },
+    {
+      "name": "menguap",
+      "instances": 9,
+      "precision": 1.0,
+      "recall": 0.737956420388363,
+      "map50": 0.8483333333333333,
+      "map50_95": 0.5667023809523809,
+      "meets_target": true
+    },
+    {
+      "name": "kerutan_dahi",
+      "instances": 0,
+      "precision": null,
+      "recall": null,
+      "map50": null,
+      "map50_95": null,
+      "meets_target": null
+    }
+  ]
+}
