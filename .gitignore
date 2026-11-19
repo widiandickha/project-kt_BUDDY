@@ -18,6 +18,9 @@ data/incoming/
 data/annotated/
 data/dataset/
 data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
 data/*.sqlite3
 # Model & hasil training
 models/*.pt
