@@ -6,6 +6,8 @@ Usage:
     python scripts/import_public.py uta  --src "/Volumes/Data/uta-reallife-drowsiness-dataset"
     python scripts/import_public.py folder                          # data/incoming/kerutan_dahi/<orang>/...
     python scripts/import_public.py folder --kelas menguap --src ~/Desktop/menguap --kondisi redup
+    python scripts/import_public.py roboflow --preset driver-yawn --src ~/Downloads/driver-yawn-yolov8
+    python scripts/import_public.py roboflow --preset wrinkles    --src ~/Downloads/wrinkles-yolov8
 
 Folder (your own photos/videos, e.g. kerutan_dahi which no public dataset has): put one sub-folder
 per person, ``<src>/<kode_orang>/*.jpg|png|mp4``, so the split stays per person. Images are copied
@@ -18,6 +20,12 @@ evenly per group (subject x glasses x folder x scenario) to avoid near-duplicate
 
 UTA-RLDD (Kaggle rishab260): one video per participant and state (0 = alert,
 5 = low vigilant, 10 = drowsy). A frame is extracted every ``dataset.import.uta_every_sec``.
+
+Roboflow (a YOLOv8 export: data.yaml + */images + */labels, boxes or segmentation polygons): the
+source labels only choose each image's hint (e.g. any ``yawn`` box -> ``menguap``); boxes are NOT
+copied, scripts/preannotate.py redraws them with our conventions (D-009). Roboflow file names carry
+no person id, so the whole export becomes one subject ``rf-<name>`` (keep it in train with
+``split_dataset.py --assign rf-<name>=train``) unless ``--subjek-regex`` can read one from the name.
 
 MRL Eye is not imported: it holds single-eye infrared crops, not webcam faces (D-007).
 Labels are NOT created here; run scripts/preannotate.py next.
@@ -242,19 +250,111 @@ def import_folder(
     return counts
 
 
+ROBOFLOW_PRESETS: dict[str, dict] = {
+    # Universidad Carlos III Madrid "driver-yawn" (YawDD frames): yawn / eyes per side.
+    "driver-yawn": {"map": {"yawn": "menguap", "close_eyel": "mata_tertutup", "close_eyer": "mata_tertutup"},
+                    "default": "normal", "max_per_hint": 400},
+    # "roboflow one wrinkles detection": frown = vertical lines between the brows.
+    "wrinkles": {"map": {"frown": "kerutan_dahi"}, "default": "normal", "max_per_hint": 300},
+}
+RF_SUFFIX = re.compile(r"(_(jpe?g|png|bmp|webp))?\.rf\.[0-9a-f]+$", re.IGNORECASE)
+
+
+def roboflow_original_stem(stem: str) -> str:
+    """'12-MaleGlasses_jpg.rf.3f2a...' -> '12-MaleGlasses'."""
+    return RF_SUFFIX.sub("", stem)
+
+
+def roboflow_class_names(src: Path) -> list[str]:
+    """Class names (lowercase) from the export's data.yaml."""
+    import yaml
+
+    found = sorted(src.rglob("data.yaml"), key=lambda p: len(p.parts))
+    if not found:
+        raise SystemExit(f"data.yaml tidak ditemukan di {src}. Export dari Roboflow dengan format YOLOv8.")
+    names = yaml.safe_load(found[0].read_text(encoding="utf-8")).get("names", [])
+    if isinstance(names, dict):
+        names = [names[k] for k in sorted(names, key=int)]
+    return [str(n).strip().lower() for n in names]
+
+
+def roboflow_label_classes(label: Path, names: list[str]) -> set[str]:
+    """Class names present in a YOLO label file (box or polygon lines)."""
+    if not label.exists():
+        return set()
+    out = set()
+    for line in label.read_text(encoding="utf-8").splitlines():
+        tok = line.split()
+        if tok and tok[0].isdigit() and int(tok[0]) < len(names):
+            out.add(names[int(tok[0])])
+    return out
+
+
+def import_roboflow(
+    src: Path, raw_dir: Path, name: str, mapping: dict[str, str], default_hint: str | None,
+    max_per_hint: int | None, subject_regex: str | None, width: int,
+) -> Counter[str]:
+    """Copy a Roboflow YOLO export into data/raw/, one hint per image from its source labels."""
+    names = roboflow_class_names(src)
+    unknown = sorted(set(mapping) - set(names))
+    if unknown:
+        raise SystemExit(f"Kelas {unknown} tidak ada di data.yaml ({names}). Cek --map.")
+    pattern = re.compile(subject_regex) if subject_regex else None
+    images = sorted(p for p in src.rglob("*") if p.parent.name == "images" and p.suffix.lower() in IMAGE_EXTS)
+    by_hint: dict[str, list[Path]] = defaultdict(list)
+    for img in images:
+        present = roboflow_label_classes(img.parent.parent / "labels" / f"{img.stem}.txt", names)
+        hint = next((h for c, h in mapping.items() if c in present), default_hint)
+        if hint is not None:
+            by_hint[hint].append(img)
+    counts: Counter[str] = Counter()
+    for hint, files in sorted(by_hint.items()):
+        for img in select_evenly(files, max_per_hint or len(files)):
+            orig = roboflow_original_stem(img.stem)
+            m = pattern.search(orig) if pattern else None
+            subj = f"rf-{slug(name)}" + (f"-{slug(m.group(1))}" if m else "")
+            dst = raw_dir / subj / hint / make_raw_name(subj, hint, "unknown", slug(orig)[:60] or "img")
+            if dst.exists():
+                counts[hint] += 1
+                continue
+            frame = cv2.imread(str(img))
+            if frame is None:
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(dst), resize_to_width(frame, width), [cv2.IMWRITE_JPEG_QUALITY, 95])
+            counts[hint] += 1
+    return counts
+
+
+def _parse_map(items: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for item in items:
+        src_cls, _, hint = item.partition("=")
+        if not hint or not re.fullmatch(r"[a-z0-9_]+", hint):
+            raise SystemExit(f"--map '{item}' harus berbentuk kelas_sumber=petunjuk, mis. yawn=menguap")
+        out[src_cls.strip().lower()] = hint
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("dataset", choices=("nthu", "uta", "folder"))
+    ap.add_argument("dataset", choices=("nthu", "uta", "folder", "roboflow"))
     ap.add_argument("--src", type=lambda s: Path(s).expanduser(),
                     help="folder dataset (Kaggle); untuk 'folder' default data/incoming/<kelas>")
     ap.add_argument("--kelas", default="kerutan_dahi", choices=CLASS_NAMES, help="folder: kelas isi folder")
     ap.add_argument("--kondisi", default="unknown", help="folder: tag kondisi (terang, redup, kacamata, ...)")
     ap.add_argument("--subjek", default="lain", help="folder: kode orang untuk file yang tidak di sub-folder")
+    ap.add_argument("--preset", choices=sorted(ROBOFLOW_PRESETS), help="roboflow: pemetaan kelas siap pakai")
+    ap.add_argument("--nama", help="roboflow: nama sumber -> subjek rf-<nama> (default nama preset)")
+    ap.add_argument("--map", action="append", default=[], help="roboflow: kelas_sumber=petunjuk (boleh berulang)")
+    ap.add_argument("--default-hint", help="roboflow: petunjuk untuk gambar tanpa kelas terpetakan ('-' = lewati)")
+    ap.add_argument("--max-per-hint", type=int, help="roboflow: batas gambar per petunjuk (diambil merata)")
+    ap.add_argument("--subjek-regex", help="roboflow: regex dengan 1 grup untuk membaca kode orang dari nama file")
     args = ap.parse_args(argv)
     if args.src is None:
         if args.dataset != "folder":
-            ap.error("--src wajib untuk nthu/uta")
+            ap.error("--src wajib untuk nthu/uta/roboflow")
         args.src = resolve_path(f"{INCOMING_DIR}/{args.kelas}")
 
     cfg = load_config()
@@ -271,6 +371,18 @@ def main(argv: list[str] | None = None) -> int:
             int(ds["import"]["uta_max_per_video"]), int(cfg["camera"]["width"]),
         )
         print("Lanjut: python scripts/preannotate.py, lalu koreksi box di Roboflow/CVAT (docs/ANOTASI.md).")
+    elif args.dataset == "roboflow":
+        preset = ROBOFLOW_PRESETS.get(args.preset or "", {})
+        name = args.nama or args.preset
+        mapping = _parse_map(args.map) if args.map else dict(preset.get("map", {}))
+        if not name or not mapping:
+            ap.error("roboflow butuh --preset, atau --nama dan minimal satu --map")
+        default = args.default_hint if args.default_hint is not None else preset.get("default")
+        counts = import_roboflow(
+            args.src, raw_dir, name, mapping, None if default in (None, "-") else default,
+            args.max_per_hint or preset.get("max_per_hint"), args.subjek_regex, int(cfg["camera"]["width"]),
+        )
+        print(f"Lanjut: preannotate.py, lalu split_dataset.py --assign rf-{slug(name)}=train (subjek tak dikenal).")
     else:
         counts = import_uta(
             args.src, raw_dir, float(ds["import"]["uta_every_sec"]),

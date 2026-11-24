@@ -85,13 +85,14 @@ Pengaturan pengguna disimpan di `data/settings.yaml`. Hapus file itu untuk kemba
 
 ### Dataset (FASE 2)
 
-Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md).
+Alur lengkap dan konvensi box ada di [docs/ANOTASI.md](docs/ANOTASI.md). Panduan untuk teman yang mengurus dataset dan training (sumber data, lisensi, sampai kirim balik model) ada di [docs/PANDUAN_DATASET.md](docs/PANDUAN_DATASET.md).
 
 ```bash
 .venv/bin/python scripts/collect_data.py --relawan andi --kondisi terang     # rekam relawan (dengan persetujuan)
 .venv/bin/python scripts/import_public.py nthu --src "~/Downloads/KAGGLE/3. NTHU DDD"
 .venv/bin/python scripts/import_public.py uta --src "/path/ke/uta-rldd"
 .venv/bin/python scripts/import_public.py folder                             # foto/video kerutan_dahi dari data/incoming/kerutan_dahi/<orang>/
+.venv/bin/python scripts/import_public.py roboflow --preset driver-yawn --src "/path/ke/export-yolov8"
 .venv/bin/python scripts/preannotate.py                                      # draf label dari landmark
 # koreksi label di Roboflow/CVAT, export YOLO ke data/annotated/
 .venv/bin/python training/split_dataset.py --src data/annotated              # split per orang + laporan

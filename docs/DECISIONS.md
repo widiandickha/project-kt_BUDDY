@@ -259,6 +259,17 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Keputusan:** `import_public.py folder` mengimpor foto/video dari `data/incoming/<kelas>/<kode_orang>/` (default kelas `kerutan_dahi`) ke `data/raw/ext-<kode>/<kelas>/`. Kelas dipakai sebagai petunjuk untuk pra-anotasi.
 - **Alasan:** `kerutan_dahi` tidak tersedia di dataset publik mana pun. Satu folder per orang menjaga split per subjek tetap berlaku.
 
+### D-030 · Sumber tambahan dari Roboflow dan pembagian kerja dataset
+- **Sumber:**
+  - *Driver yawn* (UC3M, frame YawDD, CC BY 4.0) untuk `menguap`.
+  - *Roboflow One wrinkles* (CC BY 4.0, kelas `frown`) sebagai pelengkap `kerutan_dahi`. Isinya kebanyakan kerutan permanen orang tua, jadi dibatasi 300 gambar agar model tidak belajar "wajah tua = stres".
+  - UTA-RLDD (CC0) diunduh per fold untuk menambah jumlah orang.
+- **Importer:** `import_public.py roboflow` hanya memakai label sumber sebagai petunjuk per gambar, lalu box-nya digambar ulang oleh pra-anotasi (D-009 dan D-011). Ekspor Roboflow tidak menyimpan identitas orang, jadi seluruh ekspor menjadi satu subjek `rf-<nama>` dan ditaruh di train, kecuali `--subjek-regex` bisa membaca kode orang dari nama file.
+- **Pembagian kerja:**
+  - Teman yang punya GPU mengurus seluruh alur dataset sampai training ([PANDUAN_DATASET.md](PANDUAN_DATASET.md)).
+  - Pemilik proyek mengurus relawan dan formulir persetujuan, lalu mengirim rekaman lewat Drive yang hanya dibagikan ke email teman.
+  - Anotasi dikerjakan di CVAT, bukan di proyek Roboflow publik, karena NTHU, UTA, dan relawan tidak boleh disebarkan ulang.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

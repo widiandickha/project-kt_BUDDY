@@ -122,3 +122,51 @@ def test_import_folder_per_person(imp, tmp_path: Path) -> None:
 def test_import_folder_empty_explains(imp, tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match="kode_orang"):
         imp.import_folder(tmp_path, tmp_path / "raw", "kerutan_dahi", "x", "lain", 1.0, 2, 640)
+
+
+def _rf_export(root: Path, names: list[str], items: dict[str, list[str]]) -> None:
+    """Fake Roboflow YOLOv8 export: data.yaml + train/{images,labels}."""
+    (root / "train" / "images").mkdir(parents=True)
+    (root / "train" / "labels").mkdir(parents=True)
+    (root / "data.yaml").write_text("names: [" + ", ".join(names) + "]\nnc: %d\n" % len(names))
+    for stem, lines in items.items():
+        cv2.imwrite(str(root / "train" / "images" / f"{stem}.jpg"), np.full((480, 640, 3), 100, np.uint8))
+        if lines is not None:
+            (root / "train" / "labels" / f"{stem}.txt").write_text("\n".join(lines))
+
+
+def test_roboflow_original_stem(imp) -> None:
+    assert imp.roboflow_original_stem("12-MaleGlasses-Yawning_frame3_jpg.rf.3f2a9c") == "12-MaleGlasses-Yawning_frame3"
+    assert imp.roboflow_original_stem("plain") == "plain"
+
+
+def test_import_roboflow_driver_yawn_preset(imp, tmp_path: Path) -> None:
+    from training.common import parse_raw_name
+
+    src = tmp_path / "export"
+    _rf_export(src, ["close_eyeL", "close_eyeR", "no_yawn", "open_eyeL", "open_eyeR", "yawn"], {
+        "3-FemaleGlasses-Yawning_f1_jpg.rf.aa11": ["5 0.5 0.6 0.2 0.2", "3 0.4 0.4 0.1 0.05"],
+        "3-FemaleGlasses-Yawning_f2_jpg.rf.bb22": ["0 0.4 0.4 0.1 0.05", "1 0.6 0.4 0.1 0.05"],
+        "7-Male-Normal_f9_jpg.rf.cc33": ["2 0.5 0.6 0.2 0.2"],
+        "7-Male-Normal_f10_jpg.rf.dd44": [],
+    })
+    preset = imp.ROBOFLOW_PRESETS["driver-yawn"]
+    raw = tmp_path / "raw"
+    counts = imp.import_roboflow(src, raw, "driver-yawn", preset["map"], "normal", None, r"^(\d+)-", 640)
+    assert counts == {"menguap": 1, "mata_tertutup": 1, "normal": 2}
+    files = sorted(raw.rglob("*.jpg"))
+    metas = {(parse_raw_name(f).subject, parse_raw_name(f).hint) for f in files}
+    assert metas == {("rf-driver-yawn-3", "menguap"), ("rf-driver-yawn-3", "mata_tertutup"), ("rf-driver-yawn-7", "normal")}
+    assert not list(raw.rglob("*.txt"))  # boxes are redrawn by preannotate, never copied
+
+
+def test_import_roboflow_polygons_limit_and_skip(imp, tmp_path: Path) -> None:
+    src = tmp_path / "export"
+    poly = "1 0.45 0.30 0.50 0.28 0.55 0.31 0.50 0.35"
+    _rf_export(src, ["forehead", "frown", "wrinkle"], {f"img{i}": [poly] for i in range(5)} | {"other": ["0 0.5 0.2 0.3 0.1"]})
+    raw = tmp_path / "raw"
+    counts = imp.import_roboflow(src, raw, "wrinkles", {"frown": "kerutan_dahi"}, None, 3, None, 640)
+    assert counts == {"kerutan_dahi": 3}
+    assert {p.parent.parent.name for p in raw.rglob("*.jpg")} == {"rf-wrinkles"}
+    with pytest.raises(SystemExit, match="tidak ada di data.yaml"):
+        imp.import_roboflow(src, raw, "wrinkles", {"frowns": "kerutan_dahi"}, None, None, None, 640)

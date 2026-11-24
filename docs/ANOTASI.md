@@ -43,7 +43,11 @@ check_dataset.py                    ->  DoD: yolo val jalan di semua split
 ```bash
 .venv/bin/python scripts/import_public.py nthu --src "~/Downloads/KAGGLE/3. NTHU DDD"
 .venv/bin/python scripts/import_public.py uta  --src "/path/ke/uta-reallife-drowsiness-dataset"
+.venv/bin/python scripts/import_public.py roboflow --preset driver-yawn --src "/path/ke/export-yolov8"
+.venv/bin/python scripts/import_public.py roboflow --preset wrinkles    --src "/path/ke/export-yolov8"
 ```
+
+Untuk sumber Roboflow, label aslinya hanya dipakai sebagai petunjuk per gambar, lalu box-nya digambar ulang oleh pra-anotasi. Seluruh export menjadi satu subjek `rf-<nama>`, jadi tempatkan di train dengan `split_dataset.py --assign rf-<nama>=train`. Daftar sumber, lisensi, dan alur lengkap untuk yang mengurus dataset ada di [PANDUAN_DATASET.md](PANDUAN_DATASET.md).
 
 ## 2. Pra-anotasi otomatis
 
@@ -75,6 +79,8 @@ check_dataset.py                    ->  DoD: yolo val jalan di semua split
 Frame tanpa wajah boleh dipakai sebagai sampel negatif dengan file `.txt` kosong.
 
 ## 4. Koreksi di tool anotasi
+
+> ⚠️ **Privasi:** paket gratis Roboflow biasanya membuat proyek bersifat publik. NTHU-DDD, UTA-RLDD, dan rekaman relawan **tidak boleh** diunggah ke proyek publik. Untuk data seperti itu, pakai CVAT. Roboflow hanya aman untuk sumber yang memang sudah publik (subjek `rf-*`).
 
 **Roboflow (paling mudah):**
 1. Buat proyek *Object Detection*.
