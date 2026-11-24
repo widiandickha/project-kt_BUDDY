@@ -24,7 +24,7 @@ check_dataset.py                    ->  DoD: yolo val jalan di semua split
 - Variasi wajib: cahaya terang, redup, dan backlight; dengan dan tanpa kacamata; jarak 40–90 cm; sudut kepala ringan; latar yang berbeda.
 - Target: 500 instance per kelas dari minimal 5 orang.
 
-**Foto/video sendiri, terutama `kerutan_dahi`.** Tidak ada dataset publik yang punya kelas ini, jadi datanya harus dikumpulkan sendiri. Selain `collect_data.py`, kamu bisa memakai foto atau video dari HP:
+**Foto/video sendiri, terutama `kerutan_dahi`** (saat ini ditunda, D-031: kerutan dihitung dari landmark). Tidak ada dataset publik yang punya kelas ini, jadi datanya harus dikumpulkan sendiri. Selain `collect_data.py`, kamu bisa memakai foto atau video dari HP:
 
 1. Taruh file di `data/incoming/kerutan_dahi/<kode_orang>/`, misalnya `data/incoming/kerutan_dahi/r01/*.jpg` atau `.../r02/dahi.mp4`. Satu folder untuk satu orang, karena split dibagi per orang. Gunakan kode, bukan nama, dan pastikan setiap orang sudah menandatangani persetujuan.
 2. Jalankan:

@@ -82,6 +82,10 @@ def validate_config(cfg: dict[str, Any]) -> None:
     if not pre["ear_closed"] < pre["ear_open"]:
         raise ConfigError("dataset.preannotate.ear_closed must be lower than ear_open")
 
+    landmark_classes = set(cfg["det"].get("landmark_classes", []))
+    if not landmark_classes <= {"menguap", "kerutan_dahi"}:
+        raise ConfigError("det.landmark_classes may only contain menguap and/or kerutan_dahi")
+
     if cfg["privacy"].get("save_frames", False):
         raise ConfigError("privacy.save_frames must stay false: frames may never be written to disk")
 

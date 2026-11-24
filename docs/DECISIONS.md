@@ -270,6 +270,14 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
   - Pemilik proyek mengurus relawan dan formulir persetujuan, lalu mengirim rekaman lewat Drive yang hanya dibagikan ke email teman.
   - Anotasi dikerjakan di CVAT, bukan di proyek Roboflow publik, karena NTHU, UTA, dan relawan tidak boleh disebarkan ulang.
 
+### D-031 · `kerutan_dahi` ditunda dan memakai aturan landmark
+- **Konteks:** tidak ada dataset terbuka yang cocok. DISFA, CK+, dan UNBC hanya bisa diminta oleh dosen atau peneliti. Roboflow *wrinkles* berisi kerutan permanen, bukan ekspresi. Rekaman relawan juga tidak dikumpulkan.
+- **Keputusan:**
+  - Detektor tetap 4 kelas, jadi indeks kelas, `data.yaml`, dan model lama tetap cocok. Kelas `kerutan_dahi` dibiarkan tanpa data.
+  - `det.landmark_classes: [kerutan_dahi]` membuat `brow_furrow` tetap dihitung dari aturan landmark walaupun `models/best.pt` aktif. Tanpa pengaturan ini, nilai `brow_furrow` selalu 0, karena YOLO tidak pernah melihat kelas tersebut, sehingga komponen kerutan hilang dari skor.
+  - Bobot skor tidak diubah.
+- **Akibat:** kerutan hanya terdeteksi setelah kalibrasi, karena butuh baseline `brow_ratio`. Metrik detektor untuk kelas ini ditulis "–". Keterbatasan ini dicatat di LAPORAN.md.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

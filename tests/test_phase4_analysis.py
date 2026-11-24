@@ -290,3 +290,28 @@ def test_monotonic_counters_for_event_logging() -> None:
     t = feed(win, t, 70.0)  # old samples leave the window, counters stay
     win.stats(t)
     assert win.total_yawns == 1 and win.total_hand_episodes == 3
+
+
+def test_feature_extractor_landmark_classes_with_yolo() -> None:
+    """D-031: kerutan_dahi is not trained, so it keeps the landmark rule even when YOLO runs."""
+    from src.detection.face_detector import FaceDetections
+
+    faces = FaceDetections()
+    faces.confidences.update({"mata_tertutup": 0.7, "menguap": 0.9, "kerutan_dahi": 0.0})
+    lm = LandmarkResult(face_found=True, ear_left=0.3, ear_right=0.3, ear_mean=0.3, mar=0.1, brow_ratio=0.25,
+                        face_size_ratio=0.3, nose_xy=(0.5, 0.5))
+    cfg = {**CFG, "det": {**CFG["det"], "landmark_classes": ["kerutan_dahi"]}}
+    f = FeatureExtractor(cfg, CAL).extract(1.0, lm, faces=faces, pose=None)
+    assert f.det_available and f.eye_closed_yolo == 0.7
+    assert f.yawn == 0.9  # still from YOLO
+    assert f.brow_furrow == 1.0  # from brow ratio vs calibration, not YOLO's 0.0
+    cfg_all = {**CFG, "det": {**CFG["det"], "landmark_classes": []}}
+    assert FeatureExtractor(cfg_all, CAL).extract(1.0, lm, faces=faces, pose=None).brow_furrow == 0.0
+
+
+def test_config_rejects_unknown_landmark_class() -> None:
+    from src.core.config import ConfigError, validate_config
+
+    bad = {**CFG, "det": {**CFG["det"], "landmark_classes": ["mata_tertutup"]}}
+    with pytest.raises(ConfigError, match="landmark_classes"):
+        validate_config(bad)

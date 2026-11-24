@@ -8,7 +8,9 @@ inference: {imgsz: 480, target_fps: 12, performance_mode: false, device: auto}
 # Integrasi (FASE 7, D-024): frame skip adaptif bila FPS < min_fps; performance_mode = pose tiap 3 frame, deteksi tiap 2.
 runtime: {queue_size: 2, min_fps: 8, perf_pose_every: 3, perf_det_every: 2, max_pose_every: 3, max_det_every: 2, restart_after_errors: 5}
 
-det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true}  # grayscale: D-013
+# landmark_classes: kelas yang tidak dilatih di detektor, jadi tetap memakai aturan landmark
+# walau models/best.pt ada (kerutan_dahi belum punya dataset, D-031).
+det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true, landmark_classes: [kerutan_dahi]}  # grayscale: D-013
 
 pose: {model: models/yolov8n-pose.pt, min_kp_conf: 0.5, hand_face_ratio: 0.45, hand_min_frames: 5}
 

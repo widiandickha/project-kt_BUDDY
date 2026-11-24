@@ -22,7 +22,13 @@ Peta dari setiap bab laporan ke file atau hasil di repo ini. Gambar dibuat ulang
 ## Keterbatasan (wajib ditulis)
 
 - **Bukan alat diagnosis.** Skor stres adalah indikator visual perilaku di depan layar (mata, mulut, alis, tangan, postur), bukan ukuran klinis stres.
-- **Data latih terbatas.** NTHU-DDD hanya 4 subjek, frame-nya grayscale/IR, dan versi Kaggle-nya memuat overlay tercetak yang harus dihapus. Kelas `kerutan_dahi` bergantung pada rekaman relawan.
+- **Data latih terbatas.** NTHU-DDD hanya 4 subjek, frame-nya grayscale/IR, dan versi Kaggle-nya memuat overlay tercetak yang harus dihapus.
+- **Kerutan dahi tidak dilatih di detektor (D-031).**
+  - Tidak ada dataset publik terbuka yang berisi dahi yang sedang dikerutkan (AU4) dengan bounding box.
+  - Dataset yang berlabel AU4 (DISFA, CK+, UNBC-McMaster) hanya bisa diminta lewat perjanjian oleh dosen atau peneliti.
+  - Dataset kerutan yang terbuka (Roboflow *wrinkles*) berisi kerutan permanen orang tua, bukan ekspresi.
+  - Rekaman relawan tidak sempat dikumpulkan.
+  - Akibatnya, indikator kerutan dahi dihitung dengan aturan landmark MediaPipe: alis dianggap berkerut bila turun di bawah posisi hasil kalibrasi sebanyak `landmark.brow_drop`. Indikator ini hanya aktif setelah kalibrasi, dan akurasinya tidak diukur dengan metrik detektor. Pekerjaan lanjutan: mengumpulkan data relawan atau mengajukan akses DISFA.
 - **Kondisi kamera.** Cahaya redup atau backlight, kacamata, sudut kepala, dan masker menurunkan kualitas landmark. Seberapa besar penurunannya diukur di `robustness.md`.
 - **Latensi keputusan.** Skor dihitung tiap 1 detik dan memakai hysteresis 20/30 detik. Ini disengaja agar Buddy tidak mengganggu, tapi reaksinya memang tidak seketika.
 - **Validasi skor.** Bobot dan ambang di `config.yaml` adalah nilai awal dari spesifikasi. Korelasinya dengan rasa lelah subjektif harus dilaporkan apa adanya, termasuk bila lemah.

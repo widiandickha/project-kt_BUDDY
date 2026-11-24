@@ -15,7 +15,7 @@ Proyek dibangun mengikuti dokumen *Spesifikasi Build* per fase:
 | Fase | Isi | Status |
 |---|---|---|
 | 1 | Setup environment, config, benchmark FPS | ✅ selesai |
-| 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual & rekaman relawan |
+| 2 | Dataset & anotasi (tool, pra-anotasi, split, augmentasi) | ✅ tool selesai · ⏳ anotasi manual · `kerutan_dahi` ditunda (memakai aturan landmark, D-031) |
 | 3 | Training YOLOv8, evaluasi, demo detektor | ✅ pipeline selesai · ⏳ training menunggu label final & hardware |
 | 4 | Analisis & skoring (EAR, PERCLOS, skor, hysteresis, burnout, habit, replay) | ✅ selesai |
 | 5 | Virtual Buddy (12 ekspresi, sprite player, state machine, saran, debug panel) | ✅ selesai |

@@ -2,7 +2,8 @@
 
 When no trained face detector is available (models/best.pt missing, D-016), yawn and brow
 furrow fall back to landmark rules: MAR > landmark.mar_yawn, and brow ratio below the
-calibrated baseline by landmark.brow_drop.
+calibrated baseline by landmark.brow_drop. Classes listed in det.landmark_classes keep using the
+landmark rule even when YOLO runs, because the detector was not trained on them (D-031).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ class FeatureExtractor:
     def __init__(self, cfg: dict[str, Any], calibration: Calibration) -> None:
         self.mar_yawn = float(cfg["landmark"]["mar_yawn"])
         self.brow_drop = float(cfg["landmark"]["brow_drop"])
+        self.landmark_classes = frozenset(cfg["det"].get("landmark_classes", []))
         self.calibration = calibration
 
     def set_calibration(self, calibration: Calibration) -> None:
@@ -47,13 +49,12 @@ class FeatureExtractor:
         if faces is not None:
             f.det_available = True
             f.eye_closed_yolo = faces.conf("mata_tertutup")
-            f.yawn = faces.conf("menguap")
-            f.brow_furrow = faces.conf("kerutan_dahi")
+            f.yawn = self._yawn_rule(lm) if "menguap" in self.landmark_classes else faces.conf("menguap")
+            f.brow_furrow = (self._furrow_rule(lm) if "kerutan_dahi" in self.landmark_classes
+                             else faces.conf("kerutan_dahi"))
         elif lm is not None:
-            f.yawn = 1.0 if (lm.mar or 0.0) > self.mar_yawn else 0.0
-            base = self.calibration.brow_ratio
-            if base and lm.brow_ratio is not None:
-                f.brow_furrow = 1.0 if lm.brow_ratio < base * (1.0 - self.brow_drop) else 0.0
+            f.yawn = self._yawn_rule(lm)
+            f.brow_furrow = self._furrow_rule(lm)
 
         if person is not None:
             f.hand_to_forehead = person.hand_near_forehead
@@ -63,3 +64,14 @@ class FeatureExtractor:
             if f.nose_xy is None:
                 f.nose_xy = person.nose_xy
         return f
+
+    def _yawn_rule(self, lm: LandmarkResult | None) -> float:
+        """1.0 when the mouth aspect ratio is above landmark.mar_yawn."""
+        return 1.0 if lm is not None and (lm.mar or 0.0) > self.mar_yawn else 0.0
+
+    def _furrow_rule(self, lm: LandmarkResult | None) -> float:
+        """1.0 when the brows sit landmark.brow_drop below the calibrated baseline (needs calibration)."""
+        base = self.calibration.brow_ratio
+        if lm is None or not base or lm.brow_ratio is None:
+            return 0.0
+        return 1.0 if lm.brow_ratio < base * (1.0 - self.brow_drop) else 0.0
