@@ -1,60 +1,60 @@
 {
   "meta": {
-    "evaluated_at": "2026-11-19 09:57",
-    "weights": "runs/detect/face_rtx3050/weights/best.pt",
+    "evaluated_at": "2026-11-26 06:02",
+    "weights": "models/best.pt",
     "split": "test",
     "subjects": [
-      "nthu-006"
+      "nthu-002"
     ],
     "imgsz": 640,
-    "device": "mps",
+    "device": "cuda",
     "grayscale": true,
     "label_status": "draf",
     "speed_ms": {
-      "preprocess": 0.152194543353034,
-      "inference": 1.7738829390103963,
-      "loss": 5.680942077109282e-05,
-      "postprocess": 5.949358510903733
+      "preprocess": 1.097686931962607,
+      "inference": 3.7944417207028605,
+      "loss": 0.00035730555317933105,
+      "postprocess": 0.9519336847195329
     },
     "train": {
       "base_model": "yolov8n.pt",
-      "best_epoch": 10,
-      "duration_min": 53.2,
+      "best_epoch": 35,
+      "duration_min": 156.5,
       "device": "cuda"
     }
   },
   "overall": {
-    "precision": 0.7798754504247235,
-    "recall": 0.8258465845738988,
-    "map50": 0.8527336843312203,
-    "map50_95": 0.6170059372693938
+    "precision": 0.8959164946186978,
+    "recall": 0.9175641082519225,
+    "map50": 0.9562454901147303,
+    "map50_95": 0.8351920572689664
   },
   "classes": [
     {
       "name": "mata_tertutup",
-      "instances": 86,
-      "precision": 0.4255879216922186,
-      "recall": 1.0,
-      "map50": 0.7600016126001566,
-      "map50_95": 0.5659311979433693,
-      "meets_target": false
+      "instances": 459,
+      "precision": 0.8675247704009934,
+      "recall": 0.8417577335211095,
+      "map50": 0.9287963210250788,
+      "map50_95": 0.7895451203071033,
+      "meets_target": true
     },
     {
       "name": "mata_terbuka",
-      "instances": 192,
-      "precision": 0.9140384295819522,
-      "recall": 0.7395833333333334,
-      "map50": 0.949866107060171,
-      "map50_95": 0.7183842329124313,
+      "instances": 773,
+      "precision": 0.8636082119983193,
+      "recall": 0.9780077619663649,
+      "map50": 0.9531254073111286,
+      "map50_95": 0.8528867395019833,
       "meets_target": true
     },
     {
       "name": "menguap",
-      "instances": 9,
-      "precision": 1.0,
-      "recall": 0.737956420388363,
-      "map50": 0.8483333333333333,
-      "map50_95": 0.5667023809523809,
+      "instances": 164,
+      "precision": 0.9566165014567808,
+      "recall": 0.9329268292682927,
+      "map50": 0.9868147420079832,
+      "map50_95": 0.8631443119978129,
       "meets_target": true
     },
     {

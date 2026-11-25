@@ -286,6 +286,12 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
 - **Privasi:** frame hanya ada di memori. Tidak ada tombol screenshot atau rekam. Selama jendela terbuka tampil label "LIVE · tidak disimpan". Saat ditutup, frame dibuang dan listener dilepas. Test memastikan tidak ada `imwrite` atau `QImage.save`.
 - **Kegunaan:** membantu pengguna memahami kenapa Buddy bereaksi, mengecek posisi kamera dan pencahayaan, dan dipakai untuk demo atau gambar Bab IV (pakai wajah sendiri).
 
+### D-033 · Model final menggantikan v1
+- **Keputusan:** `models/best.pt` diganti dengan hasil training final (`runs/detect/face_final`: 13 subjek train, termasuk 11 orang UTA dan Roboflow driver-yawn; epoch terbaik 35). v1 disimpan sebagai `models/best.prev.pt` untuk perbandingan.
+- **Alasan:** pada dua subjek NTHU yang tidak dipakai melatih bobot kedua model, mAP50 naik (0,923→0,956 dan 0,853→0,951), dan kesalahan "mata terbuka terbaca tertutup" turun dari 19,4% ke 9,0% (`docs/eval/perbandingan_model.md`).
+- **Catatan jujur:** label dataset final dibuat ulang oleh pra-anotasi tepat sebelum split dan tidak dikoreksi manual, jadi status labelnya tetap **draf** walau evaluasi aslinya ditandai `final`. `metrics.md` dan `metrics.json` sudah dikoreksi.
+- **Akibat:** model final lebih sering melewatkan mata terpejam (16,9% vs 10,8%), tapi efeknya diredam fusi EAR (D-019). Konfigurasi aplikasi tidak berubah.
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:
