@@ -254,8 +254,6 @@ ROBOFLOW_PRESETS: dict[str, dict] = {
     # Universidad Carlos III Madrid "driver-yawn" (YawDD frames): yawn / eyes per side.
     "driver-yawn": {"map": {"yawn": "menguap", "close_eyel": "mata_tertutup", "close_eyer": "mata_tertutup"},
                     "default": "normal", "max_per_hint": 400},
-    # "roboflow one wrinkles detection": frown = vertical lines between the brows.
-    "wrinkles": {"map": {"frown": "kerutan_dahi"}, "default": "normal", "max_per_hint": 300},
 }
 RF_SUFFIX = re.compile(r"(_(jpe?g|png|bmp|webp))?\.rf\.[0-9a-f]+$", re.IGNORECASE)
 
@@ -342,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("dataset", choices=("nthu", "uta", "folder", "roboflow"))
     ap.add_argument("--src", type=lambda s: Path(s).expanduser(),
                     help="folder dataset (Kaggle); untuk 'folder' default data/incoming/<kelas>")
-    ap.add_argument("--kelas", default="kerutan_dahi", choices=CLASS_NAMES, help="folder: kelas isi folder")
+    ap.add_argument("--kelas", default="menguap", choices=CLASS_NAMES, help="folder: kelas isi folder")
     ap.add_argument("--kondisi", default="unknown", help="folder: tag kondisi (terang, redup, kacamata, ...)")
     ap.add_argument("--subjek", default="lain", help="folder: kode orang untuk file yang tidak di sub-folder")
     ap.add_argument("--preset", choices=sorted(ROBOFLOW_PRESETS), help="roboflow: pemetaan kelas siap pakai")

@@ -21,7 +21,7 @@ from src.ui import theme
 
 REFRESH_MS = 66  # ~15 Hz; inference is capped lower anyway
 CLASS_COLORS: dict[str, str] = {
-    "mata_tertutup": "#DC2626", "mata_terbuka": "#16A34A", "menguap": "#EA580C", "kerutan_dahi": "#9333EA",
+    "mata_tertutup": "#DC2626", "mata_terbuka": "#16A34A", "menguap": "#EA580C",
 }
 LANDMARK_COLOR = "#38BDF8"
 POSE_COLOR = "#FACC15"
@@ -41,11 +41,6 @@ def indicators(frame: Any, calibration: Any, cfg: dict[str, Any], snapshot: Any 
     closed = eye_closed(f, calibration.ear_threshold, cfg) if f.user_present else None
     out["mata"] = ("–", theme.TEXT_2) if closed is None else (("TERTUTUP", BAD) if closed else ("terbuka", OK))
     out["menguap"] = ("YA", WARN) if f.yawn >= 0.5 else ("tidak", OK)
-    furrow_src = "landmark" if "kerutan_dahi" in cfg["det"].get("landmark_classes", []) or not f.det_available else "YOLO"
-    if furrow_src == "landmark" and not calibration.brow_ratio:
-        out["kerutan"] = ("perlu kalibrasi", theme.TEXT_2)
-    else:
-        out["kerutan"] = (f"YA ({furrow_src})", WARN) if f.brow_furrow >= 0.5 else (f"tidak ({furrow_src})", OK)
     out["tangan"] = ("di dahi", WARN) if f.hand_to_forehead else ("tidak", OK)
     h = cfg["habit"]
     if f.shoulder_slouch is None:
@@ -183,7 +178,6 @@ class PreviewWindow(QWidget):
         ("wajah", "👤  Wajah"),
         ("mata", "👁️  Mata"),
         ("menguap", "🥱  Menguap"),
-        ("kerutan", "🤨  Kerutan dahi"),
         ("tangan", "✋  Tangan"),
         ("postur", "🪑  Postur"),
         ("jarak", "📏  Jarak layar"),

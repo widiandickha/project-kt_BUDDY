@@ -8,16 +8,15 @@ inference: {imgsz: 480, target_fps: 12, performance_mode: false, device: auto}
 # Integrasi (FASE 7, D-024): frame skip adaptif bila FPS < min_fps; performance_mode = pose tiap 3 frame, deteksi tiap 2.
 runtime: {queue_size: 2, min_fps: 8, perf_pose_every: 3, perf_det_every: 2, max_pose_every: 3, max_det_every: 2, restart_after_errors: 5}
 
-# landmark_classes: kelas yang tidak dilatih di detektor, jadi tetap memakai aturan landmark
-# walau models/best.pt ada (kerutan_dahi belum punya dataset, D-031).
-det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true, landmark_classes: [kerutan_dahi]}  # grayscale: D-013
+# Detektor wajah YOLOv8 (3 kelas: mata_tertutup, mata_terbuka, menguap).
+det: {model: models/best.pt, conf: 0.40, conf_eye: 0.50, iou: 0.5, grayscale: true, landmark_classes: []}  # grayscale: D-013
 
 pose: {model: models/yolov8n-pose.pt, min_kp_conf: 0.5, hand_face_ratio: 0.45, hand_min_frames: 5}
 
 ear: {closed_threshold: 0.21, blink_min_ms: 80, microsleep_ms: 400, fusion_w_ear: 0.6, fusion_w_yolo: 0.4, fusion_threshold: 0.5}
 
-# Landmark MediaPipe: sumber EAR utama + cadangan menguap/kerutan bila models/best.pt belum ada (D-016).
-landmark: {model: models/face_landmarker.task, mar_yawn: 0.45, brow_drop: 0.10}
+# Landmark MediaPipe: sumber EAR utama + cadangan menguap bila models/best.pt belum ada (D-016).
+landmark: {model: models/face_landmarker.task, mar_yawn: 0.45}
 
 # Kalibrasi first-run (4.6): mata terbuka normal lalu pejam sebentar.
 calibration: {total_sec: 20, closed_sec: 5, min_samples: 15, default_open_ear: 0.30, default_closed_ear: 0.12}
@@ -25,10 +24,10 @@ calibration: {total_sec: 20, closed_sec: 5, min_samples: 15, default_open_ear: 0
 window: {short_sec: 60, long_sec: 1800, yawn_min_sec: 1.0, yawn_debounce_sec: 10}
 
 score:
-  weights: {perclos: 0.30, yawn: 0.20, furrow: 0.20, hand: 0.15, blink: 0.10, motion: 0.05}
+  weights: {perclos: 0.35, yawn: 0.25, hand: 0.20, blink: 0.15, motion: 0.05}
   thresholds: {low: 35, high: 65}
   # Normalisasi indikator (tabel 4.5): nilai / pembagi, di-clamp 0..1.
-  norm: {perclos: 0.30, yawn: 3, furrow: 0.40, hand: 4, blink: 15, motion: 0.05}
+  norm: {perclos: 0.30, yawn: 3, hand: 4, blink: 15, motion: 0.05}
   blink_normal: [15, 20]    # kedipan per menit normal
   ema_alpha: 0.3
   up_hold_sec: 20
@@ -116,7 +115,6 @@ dataset:
     mar_yawn: 0.45         # MAR bibir dalam > ini -> menguap
     pad_eyes: 0.08         # padding tiap sisi box, relatif lebar wajah
     pad_mouth: 0.06
-    pad_brow: 0.05
   augment: {copies: 1, brightness: 0.25, contrast: 0.25, blur_max_kernel: 5, rotate_deg: 10, hflip_p: 0.5, seed: 42}
 
 # FASE 3: training YOLOv8 (hyperparameter awal spesifikasi; lihat docs/DECISIONS.md D-013 s.d. D-015).

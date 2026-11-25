@@ -31,7 +31,7 @@ def fill_demo_data(repo: Repository, end_day: date, days: int = 7, seed: int = 3
                 repo.add_event(t + away, sid, "user_returned", 1, {"away_sec": away})
                 repo.add_event(t + away, sid, "good_break", 1, {})
                 for k in range(int(away // LOG_EVERY_SEC)):
-                    repo.add_stress(StressRow(t + k * LOG_EVERY_SEC, sid, None, None, 0, None, 0, 0, 0, False))
+                    repo.add_stress(StressRow(t + k * LOG_EVERY_SEC, sid, None, None, 0, None, 0, 0, False))
                 t += away
                 next_break = t + rng.uniform(45, 110) * 60
                 score = max(5.0, score - 15)
@@ -41,7 +41,7 @@ def fill_demo_data(repo: Repository, end_day: date, days: int = 7, seed: int = 3
             score = float(np.clip(score + drift + rng.normal(0, 0.8), 0, 100))
             level = "tinggi" if score > 65 else "sedang" if score >= 35 else "rendah"
             repo.add_stress(StressRow(t, sid, round(score, 1), level, round(score / 300, 3), float(rng.uniform(9, 20)),
-                                      int(score > 40), round(score / 250, 3), int(score > 50), True))
+                                      int(score > 40), int(score > 50), True))
             if rng.random() < 0.004:
                 repo.add_event(t, sid, "yawn", 1, {})
             if rng.random() < 0.0015:

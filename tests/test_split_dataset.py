@@ -70,7 +70,7 @@ def test_end_to_end_build(tmp_path: Path) -> None:
     data_yaml = tmp_path / "data.yaml"
     sd.write_data_yaml(data_yaml, out)
     doc = yaml.safe_load(data_yaml.read_text())
-    assert doc["names"] == {0: "mata_tertutup", 1: "mata_terbuka", 2: "menguap", 3: "kerutan_dahi"}
+    assert doc["names"] == {0: "mata_tertutup", 1: "mata_terbuka", 2: "menguap"}
     assert doc["train"] == "images/train"
 
     report = sd.build_report(items, assignment, stats, unlabeled, target_per_class=500, min_subjects=5)

@@ -21,15 +21,15 @@ from src.ui.preview_window import PreviewWindow, indicators, to_qimage
 from tests.test_phase7_integration import FAST, factory, frames_dir, make_pipeline, wait_for  # noqa: F401
 
 CFG = load_config()
-CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)
+CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30)
 
 
-def _frame(ear: float = 0.31, yawn: float = 0.0, furrow: float = 0.0, det: bool = True) -> PreviewFrame:
+def _frame(ear: float = 0.31, yawn: float = 0.0, det: bool = True) -> PreviewFrame:
     img = np.full((480, 640, 3), 90, np.uint8)
     f = FrameFeatures(ts=1.0, user_present=True, ear_mean=ear, ear_left=ear, ear_right=ear, mar=0.2,
-                      yawn=yawn, brow_furrow=furrow, det_available=det, eye_closed_yolo=0.0,
+                      yawn=yawn, det_available=det, eye_closed_yolo=0.0,
                       shoulder_slouch=0.40, face_size_ratio=0.45)
-    lm = LandmarkResult(True, ear, ear, ear, 0.2, 0.3, 0.3, (200, 100, 440, 400), (0.5, 0.5),
+    lm = LandmarkResult(True, ear, ear, ear, 0.2, 0.3, (200, 100, 440, 400), (0.5, 0.5),
                         eye_box=(250, 200, 390, 240), mouth_box=(280, 320, 360, 360))
     faces = FaceDetections()
     faces.boxes.append(Detection("mata_terbuka", 0.91, (250, 200, 390, 240)))
@@ -45,12 +45,12 @@ def test_indicators_text_and_colours() -> None:
     assert ok["skor"][0] == "72 · Tinggi" and ok["fps"][0] == "11.8"
     assert ok["postur"][0] == "membungkuk"  # 0.40 < 0.62 * (1 - slouch_drop)
     assert ok["jarak"][0] == "terlalu dekat"
-    assert ok["kerutan"][0] == "tidak (landmark)"  # D-031: landmark even with YOLO
-    bad = indicators(_frame(ear=0.05, yawn=1.0, furrow=1.0), CAL, CFG, None)
+    assert "kerutan" not in ok
+    bad = indicators(_frame(ear=0.05, yawn=1.0), CAL, CFG, None)
     assert bad["mata"][0].startswith("TERTUTUP") and bad["menguap"][0].startswith("YA")
-    assert bad["kerutan"][0] == "YA (landmark)" and bad["skor"][0] == "menghitung…"
+    assert bad["skor"][0] == "menghitung…"
     uncal = indicators(_frame(), Calibration.default(CFG), CFG, None)
-    assert uncal["kerutan"][0] == "perlu kalibrasi" and "perlu kalibrasi" in uncal["postur"][0]
+    assert "perlu kalibrasi" in uncal["postur"][0]
 
 
 def test_measure_gives_eye_and_mouth_boxes() -> None:

@@ -76,8 +76,8 @@ def make_sample(path: Path, seed: int = 7) -> int:
                     ear = 0.09
                 else:
                     next_blink = t + rng.uniform(2.5, 4.5)
-            if name in ("drowsy", "lelah") and (t - seg_start) % 8 < (1.5 if name == "drowsy" else 2.5):
-                ear = 0.08  # 1.5 s closures every 8 s
+            if name in ("drowsy", "lelah") and (t - seg_start) % 8 < (2.5 if name == "drowsy" else 3.0):
+                ear = 0.08  # long closures every 8 s
             mar = 0.1
             if name in ("yawn", "lelah") and (t - seg_start) % 15 < 2.0:
                 mar = 0.7  # 2 s yawn every 15 s
@@ -87,7 +87,7 @@ def make_sample(path: Path, seed: int = 7) -> int:
                 ts=SAMPLE_T0 + t, user_present=present,
                 ear_left=ear if present else None, ear_right=ear if present else None, ear_mean=ear if present else None,
                 mar=mar if present else None, yawn=1.0 if present and mar > 0.45 else 0.0,
-                brow_ratio=0.30 if present else None, hand_to_forehead=present and hand,
+                hand_to_forehead=present and hand,
                 shoulder_slouch=slouch if present else None, face_size_ratio=0.30 if present else None,
                 nose_xy=(0.5 + 0.01 * math.sin(t), 0.45) if present else None,
             )
@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--file wajib diisi (atau --make-sample)")
 
     cfg = load_config()
-    calibration = Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)
+    calibration = Calibration.from_values(0.31, 0.09, 0.62, 0.30)
     features = list(read_features(resolve_path(args.file)))
     results = replay(features, AnalysisEngine(cfg, calibration))
     t0 = features[0].ts if features else 0.0

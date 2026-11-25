@@ -54,7 +54,7 @@ def test_writer_batches_and_flushes(tmp_path: Path) -> None:
 
 def test_repository_round_trips(repo: Repository) -> None:
     sid = repo.start_session(ts(9))
-    repo.add_stress(StressRow(ts(9, 0, 10), sid, 20.0, "rendah", 0.05, 15.0, 0, 0.0, 0, True))
+    repo.add_stress(StressRow(ts(9, 0, 10), sid, 20.0, "rendah", 0.05, 15.0, 0, 0, True))
     repo.add_event(ts(9, 1), sid, "user_returned", 1, {"away_sec": 400})
     repo.add_advice(ts(9, 2), "need_break", "alert")
     repo.set_advice_response(ts(9, 2), "need_break", "oke")
@@ -71,7 +71,7 @@ def test_repository_round_trips(repo: Repository) -> None:
 
 def test_minute_means(repo: Repository) -> None:
     for i in range(12):
-        repo.add_stress(StressRow(ts(9, 0, 0) + i * 10, 1, 10.0 if i < 6 else 30.0, "rendah", 0, None, 0, 0, 0, True))
+        repo.add_stress(StressRow(ts(9, 0, 0) + i * 10, 1, 10.0 if i < 6 else 30.0, "rendah", 0, None, 0, 0, True))
     means = repo.minute_means(ts(9), ts(10))
     assert [m for _, m in means] == [10.0, 30.0]
 
@@ -117,9 +117,9 @@ def test_aggregate_known_day(repo: Repository) -> None:
     sid = repo.start_session(ts(9))
     for i in range(360):  # 1 hour present, score 10..; peak 80 at 09:30
         score = 80.0 if i == 180 else 20.0
-        repo.add_stress(StressRow(ts(9) + i * 10, sid, score, "rendah", 0, 15, 0, 0, 0, True))
+        repo.add_stress(StressRow(ts(9) + i * 10, sid, score, "rendah", 0, 15, 0, 0, True))
     for i in range(36):  # 6 min away
-        repo.add_stress(StressRow(ts(10) + i * 10, sid, None, None, 0, None, 0, 0, 0, False))
+        repo.add_stress(StressRow(ts(10) + i * 10, sid, None, None, 0, None, 0, 0, False))
     repo.add_event(ts(10, 6), sid, "user_returned", 1, {"away_sec": 360})
     repo.add_event(ts(10, 6), sid, "good_break", 1, {})
     repo.add_event(ts(9, 10), sid, "yawn")

@@ -9,7 +9,6 @@ Keys in the preview window:
     1  pejamkan mata        -> mata_tertutup
     2  buka mata normal     -> mata_terbuka
     3  menguap              -> menguap
-    4  kerutkan dahi        -> kerutan_dahi
     SPASI  simpan 1 frame untuk instruksi aktif
     B      mode burst on/off (simpan otomatis tiap dataset.collect.burst_interval_sec)
     Q/ESC  selesai
@@ -57,7 +56,6 @@ INSTRUCTIONS: tuple[Instruction, ...] = (
     Instruction("1", "mata_tertutup", "Pejamkan mata"),
     Instruction("2", "mata_terbuka", "Buka mata normal, lihat layar"),
     Instruction("3", "menguap", "Menguap / buka mulut lebar"),
-    Instruction("4", "kerutan_dahi", "Kerutkan dahi"),
 )
 assert {i.cls for i in INSTRUCTIONS} == set(CLASS_NAMES)
 

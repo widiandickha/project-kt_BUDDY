@@ -1,7 +1,7 @@
 """Time-based sliding window over FrameFeatures (spec 4.3 + 4.4).
 
 Per window: PERCLOS (only closures >= ear.microsleep_ms count), blink rate (closures between
-blink_min_ms and microsleep_ms), yawn count (>= yawn_min_sec, debounced), furrow ratio,
+blink_min_ms and microsleep_ms), yawn count (>= yawn_min_sec, debounced),
 hand-to-forehead ratio/count, and trajectory motion (std of the nose position).
 """
 
@@ -43,7 +43,6 @@ class _Sample:
     present: bool
     closed: bool | None
     yawn: bool
-    furrow: bool
     hand: bool
     nose: tuple[float, float] | None
 
@@ -57,7 +56,6 @@ class WindowStats:
     perclos: float
     blink_rate: float | None
     yawn_count: int
-    furrow_ratio: float
     hand_forehead_ratio: float
     hand_forehead_count: int
     trajectory_motion: float
@@ -111,7 +109,6 @@ class SlidingWindow:
             present=f.user_present,
             closed=eye_closed(f, self.ear_threshold, self.cfg) if f.user_present else None,
             yawn=f.user_present and f.yawn > ACTIVE,
-            furrow=f.user_present and f.brow_furrow > ACTIVE,
             hand=f.user_present and f.hand_to_forehead,
             nose=f.nose_xy if f.user_present else None,
         )
@@ -141,7 +138,7 @@ class SlidingWindow:
         with self._lock:
             samples = list(self._samples)
         if not samples:
-            return WindowStats(0.0, 0.0, 0.0, None, 0, 0.0, 0.0, 0, 0.0, False)
+            return WindowStats(0.0, 0.0, 0.0, None, 0, 0.0, 0, 0.0, False)
         span = max(1e-6, min(self.span, now - samples[0].ts))
         present = [s for s in samples if s.present]
         present_ratio = len(present) / len(samples)
@@ -164,7 +161,6 @@ class SlidingWindow:
             perclos=min(1.0, perclos),
             blink_rate=blink_rate,
             yawn_count=self._update_yawns(samples, now),
-            furrow_ratio=time_ratio("furrow"),
             hand_forehead_ratio=time_ratio("hand"),
             hand_forehead_count=len(hand_runs),
             trajectory_motion=motion,

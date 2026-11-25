@@ -1,4 +1,4 @@
-"""MediaPipe face landmarks -> EAR (spec 4.2), MAR, brow ratio, face size.
+"""MediaPipe face landmarks -> EAR (spec 4.2), MAR, face size.
 
 EAR = (||p2 - p6|| + ||p3 - p5||) / (2 * ||p1 - p4||) with Face Mesh indices
 left eye [362, 385, 387, 263, 373, 380], right eye [33, 160, 158, 133, 153, 144].
@@ -22,9 +22,6 @@ MOUTH_INNER_V: tuple[int, int] = (13, 14)
 MOUTH_CORNERS: tuple[int, int] = (78, 308)
 FACE_SIDES: tuple[int, int] = (234, 454)
 EYE_OUTER: tuple[int, int] = (33, 263)
-INNER_BROWS: tuple[int, int] = (107, 336)
-BROW_EYELID_LEFT: tuple[int, int] = (295, 386)
-BROW_EYELID_RIGHT: tuple[int, int] = (65, 159)
 NOSE_TIP: int = 1
 MOUTH_OUTLINE: tuple[int, ...] = (61, 291, 0, 17, 13, 14, 78, 308)
 
@@ -54,17 +51,6 @@ def compute_mar(pts: np.ndarray) -> float:
     return _dist(pts[MOUTH_INNER_V[0]], pts[MOUTH_INNER_V[1]]) / horiz
 
 
-def compute_brow_ratio(pts: np.ndarray) -> float:
-    """Brow tension proxy: inner-brow gap and brow-eyelid gap over eye span (smaller = more furrowed)."""
-    span = _dist(pts[EYE_OUTER[0]], pts[EYE_OUTER[1]])
-    if span < 1e-6:
-        return 0.0
-    inner = _dist(pts[INNER_BROWS[0]], pts[INNER_BROWS[1]]) / span
-    lift = (_dist(pts[BROW_EYELID_LEFT[0]], pts[BROW_EYELID_LEFT[1]])
-            + _dist(pts[BROW_EYELID_RIGHT[0]], pts[BROW_EYELID_RIGHT[1]])) / (2.0 * span)
-    return 0.5 * inner + 0.5 * lift
-
-
 @dataclass
 class LandmarkResult:
     """Landmark-derived measurements of one frame."""
@@ -74,7 +60,6 @@ class LandmarkResult:
     ear_right: float | None = None
     ear_mean: float | None = None
     mar: float | None = None
-    brow_ratio: float | None = None
     face_size_ratio: float | None = None
     face_box: tuple[int, int, int, int] | None = None
     nose_xy: tuple[float, float] | None = None
@@ -103,7 +88,6 @@ def measure(pts: np.ndarray, width: int, height: int) -> LandmarkResult:
         ear_right=right,
         ear_mean=(left + right) / 2.0,
         mar=compute_mar(pts),
-        brow_ratio=compute_brow_ratio(pts),
         face_size_ratio=float((x2 - x1) / max(width, 1)),
         face_box=(int(max(0, x1)), int(max(0, y1)), int(min(width - 1, x2)), int(min(height - 1, y2))),
         nose_xy=(float(nose[0] / max(width, 1)), float(nose[1] / max(height, 1))),

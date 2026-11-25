@@ -1,4 +1,4 @@
-"""YOLO face-state detector (mata_tertutup, mata_terbuka, menguap, kerutan_dahi).
+"""YOLO face-state detector (mata_tertutup, mata_terbuka, menguap).
 
 Runtime use:
     detector = FaceDetector(load_config())
@@ -35,7 +35,6 @@ CLASS_COLORS: dict[str, tuple[int, int, int]] = {
     "mata_tertutup": (60, 60, 230),
     "mata_terbuka": (60, 190, 60),
     "menguap": (230, 140, 40),
-    "kerutan_dahi": (200, 60, 200),
 }
 
 
@@ -97,8 +96,9 @@ class FaceDetector:
         self.imgsz = int(cfg["inference"]["imgsz"])
         self.device = select_device(device or cfg["inference"]["device"]).device
         names = self.model.names
-        if tuple(names[i] for i in range(len(names))) != CLASS_NAMES:
-            raise ValueError(f"Kelas model {names} tidak sama dengan {CLASS_NAMES}")
+        model_classes = tuple(names[i] for i in range(len(names)))
+        if model_classes[:len(CLASS_NAMES)] != CLASS_NAMES:
+            raise ValueError(f"Kelas model {names} tidak cocok dengan {CLASS_NAMES}")
 
     def predict(self, frame_bgr: np.ndarray) -> FaceDetections:
         """Detect face states in one BGR frame."""

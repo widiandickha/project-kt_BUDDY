@@ -108,20 +108,20 @@ def test_import_folder_per_person(imp, tmp_path: Path) -> None:
     cv2.imwrite(str(src / "lepas.jpg"), np.zeros((100, 100, 3), np.uint8))
 
     raw = tmp_path / "raw"
-    counts = imp.import_folder(src, raw, "kerutan_dahi", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
+    counts = imp.import_folder(src, raw, "menguap", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
     assert counts == {"ext-rina-a": 2, "ext-r02": 2, "ext-lain": 1}
-    files = sorted((raw / "ext-rina-a" / "kerutan_dahi").glob("*.jpg"))
+    files = sorted((raw / "ext-rina-a" / "menguap").glob("*.jpg"))
     assert len(files) == 2 and cv2.imread(str(files[0])).shape[1] == 640
     meta = parse_raw_name(files[0])
-    assert (meta.subject, meta.hint, meta.condition) == ("ext-rina-a", "kerutan_dahi", "terang")
+    assert (meta.subject, meta.hint, meta.condition) == ("ext-rina-a", "menguap", "terang")
     # idempotent: running again does not duplicate files
-    imp.import_folder(src, raw, "kerutan_dahi", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
+    imp.import_folder(src, raw, "menguap", "terang", "lain", every_sec=1.0, max_frames=2, width=640)
     assert len(list(raw.rglob("*.jpg"))) == 5
 
 
 def test_import_folder_empty_explains(imp, tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match="kode_orang"):
-        imp.import_folder(tmp_path, tmp_path / "raw", "kerutan_dahi", "x", "lain", 1.0, 2, 640)
+        imp.import_folder(tmp_path, tmp_path / "raw", "menguap", "x", "lain", 1.0, 2, 640)
 
 
 def _rf_export(root: Path, names: list[str], items: dict[str, list[str]]) -> None:
@@ -163,10 +163,10 @@ def test_import_roboflow_driver_yawn_preset(imp, tmp_path: Path) -> None:
 def test_import_roboflow_polygons_limit_and_skip(imp, tmp_path: Path) -> None:
     src = tmp_path / "export"
     poly = "1 0.45 0.30 0.50 0.28 0.55 0.31 0.50 0.35"
-    _rf_export(src, ["forehead", "frown", "wrinkle"], {f"img{i}": [poly] for i in range(5)} | {"other": ["0 0.5 0.2 0.3 0.1"]})
+    _rf_export(src, ["mouth", "yawn", "other"], {f"img{i}": [poly] for i in range(5)} | {"other": ["0 0.5 0.2 0.3 0.1"]})
     raw = tmp_path / "raw"
-    counts = imp.import_roboflow(src, raw, "wrinkles", {"frown": "kerutan_dahi"}, None, 3, None, 640)
-    assert counts == {"kerutan_dahi": 3}
-    assert {p.parent.parent.name for p in raw.rglob("*.jpg")} == {"rf-wrinkles"}
+    counts = imp.import_roboflow(src, raw, "custom-yawn", {"yawn": "menguap"}, None, 3, None, 640)
+    assert counts == {"menguap": 3}
+    assert {p.parent.parent.name for p in raw.rglob("*.jpg")} == {"rf-custom-yawn"}
     with pytest.raises(SystemExit, match="tidak ada di data.yaml"):
-        imp.import_roboflow(src, raw, "wrinkles", {"frowns": "kerutan_dahi"}, None, None, None, 640)
+        imp.import_roboflow(src, raw, "custom-yawn", {"yawns": "menguap"}, None, None, None, 640)

@@ -9,7 +9,6 @@ Usage:
 Box conventions (docs/DECISIONS.md D-009):
     mata_tertutup / mata_terbuka : ONE box covering both eyes (state from EAR)
     menguap                      : lower face, nose base to chin, incl. the open mouth (from MAR)
-    kerutan_dahi                 : forehead + brows; only added when the hint is kerutan_dahi
 
 Existing label files are never touched without --overwrite, so corrected labels are safe.
 Writes <image>.txt beside each image, classes.txt in the raw root, and _preannotate.csv
@@ -32,7 +31,7 @@ import cv2  # noqa: E402
 import numpy as np  # noqa: E402
 
 from src.core.config import load_config, resolve_path  # noqa: E402
-from src.detection.classes import CLASS_NAMES, KERUTAN_DAHI, MATA_TERBUKA, MATA_TERTUTUP, MENGUAP  # noqa: E402
+from src.detection.classes import CLASS_NAMES, MATA_TERBUKA, MATA_TERTUTUP, MENGUAP  # noqa: E402
 from src.detection.ear_calculator import (  # noqa: E402
     FACE_SIDES,
     LEFT_EYE,
@@ -57,10 +56,6 @@ EYES: tuple[int, ...] = (
     362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398,
 )
 LOWER_FACE: tuple[int, ...] = (2, 152, 61, 291, 0, 17, 148, 377, 176, 400, 58, 288)
-BROW_FOREHEAD: tuple[int, ...] = (
-    70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 336, 296, 334, 293, 300, 285, 295, 282, 283, 276,
-    10, 109, 338, 67, 297, 151,
-)
 
 
 @dataclass
@@ -72,7 +67,6 @@ class Thresholds:
     mar_yawn: float
     pad_eyes: float
     pad_mouth: float
-    pad_brow: float
 
 
 @dataclass
@@ -123,11 +117,6 @@ def annotate_points(pts: np.ndarray, width: int, height: int, hint: str, th: Thr
     elif hint == "menguap":
         ann.flags.append("hint_menguap_mulut_tertutup")
 
-    if hint == "kerutan_dahi":
-        box = region_box(pts, BROW_FOREHEAD, th.pad_brow, face_w, KERUTAN_DAHI, width, height)
-        if box:
-            ann.boxes.append(box)
-        ann.flags.append("cek_kerutan")
     if hint == "mata_tertutup" and eye_cls != MATA_TERTUTUP:
         ann.flags.append("hint_tertutup_ear_terbuka")
     return ann
@@ -148,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     raw_dir = resolve_path(ds["raw_dir"])
     src = resolve_path(args.src) if args.src else raw_dir
     pre = ds["preannotate"]
-    th = Thresholds(**{k: float(pre[k]) for k in ("ear_closed", "ear_open", "mar_yawn", "pad_eyes", "pad_mouth", "pad_brow")})
+    th = Thresholds(**{k: float(pre[k]) for k in ("ear_closed", "ear_open", "mar_yawn", "pad_eyes", "pad_mouth")})
 
     detector = LandmarkDetector(ensure_landmarker(resolve_path(pre["landmarker"])))
     (raw_dir / "classes.txt").write_text("\n".join(CLASS_NAMES) + "\n", encoding="utf-8")

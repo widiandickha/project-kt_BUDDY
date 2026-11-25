@@ -25,7 +25,6 @@ class StressRow:
     perclos: float
     blink_rate: float | None
     yawn_count: int
-    furrow_ratio: float
     hand_count: int
     user_present: bool
 
@@ -59,7 +58,7 @@ class Repository:
         self._write(
             "INSERT INTO stress_log (ts, session_id, score, level, perclos, blink_rate, yawn_count, furrow_ratio,"
             " hand_count, user_present) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (r.ts, r.session_id, r.score, r.level, r.perclos, r.blink_rate, r.yawn_count, r.furrow_ratio,
+            (r.ts, r.session_id, r.score, r.level, r.perclos, r.blink_rate, r.yawn_count, 0.0,
              r.hand_count, int(r.user_present)),
         )
 

@@ -45,11 +45,11 @@ def test_count_instances(tmp_path: Path) -> None:
     (tmp_path / "a.txt").write_text("0 0.5 0.5 0.1 0.1\n2 0.5 0.5 0.1 0.1\n")
     (tmp_path / "b.txt").write_text("")
     (tmp_path / "c.txt").write_text("0 0.5 0.5 0.1 0.1\n")
-    assert ev.count_instances(tmp_path) == [2, 0, 1, 0]
+    assert ev.count_instances(tmp_path) == [2, 0, 1]
 
 
 def test_per_class_metrics_and_report() -> None:
-    rows = ev.per_class_metrics({0: (0.9, 0.8, 0.85, 0.5), 2: (0.6, 0.5, 0.55, 0.3)}, [10, 0, 4, 0], target=0.80)
+    rows = ev.per_class_metrics({0: (0.9, 0.8, 0.85, 0.5), 2: (0.6, 0.5, 0.55, 0.3)}, [10, 0, 4], target=0.80)
     by_name = {r.name: r for r in rows}
     assert by_name["mata_tertutup"].meets_target is True
     assert by_name["menguap"].meets_target is False
@@ -59,7 +59,7 @@ def test_per_class_metrics_and_report() -> None:
     overall = {"precision": 0.7, "recall": 0.6, "map50": 0.7, "map50_95": 0.4}
     draft = ev.render_markdown(rows, overall, meta, 0.80, "draf")
     assert "Label draf" in draft and "❌" in draft and "✅" in draft
-    assert "`menguap`" in draft and "`kerutan_dahi`" in draft
+    assert "`menguap`" in draft and "`mata_terbuka`" in draft
     assert "Label draf" not in ev.render_markdown(rows, overall, meta, 0.80, "final")
 
 

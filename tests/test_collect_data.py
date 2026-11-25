@@ -20,10 +20,10 @@ def test_instructions_cover_every_class() -> None:
 def test_output_path_follows_raw_scheme(tmp_path: Path) -> None:
     cd = load_script("collect_data")
     subj = cd.subject_id("Andi Pratama")
-    p = cd.output_path(tmp_path, subj, "kerutan_dahi", "redup", "1700000000000")
-    assert p.parent == tmp_path / "self-andi-pratama" / "kerutan_dahi"
+    p = cd.output_path(tmp_path, subj, "menguap", "redup", "1700000000000")
+    assert p.parent == tmp_path / "self-andi-pratama" / "menguap"
     meta = parse_raw_name(p)
-    assert (meta.subject, meta.hint, meta.condition) == ("self-andi-pratama", "kerutan_dahi", "redup")
+    assert (meta.subject, meta.hint, meta.condition) == ("self-andi-pratama", "menguap", "redup")
 
 
 def test_hud_never_touches_saved_frame() -> None:

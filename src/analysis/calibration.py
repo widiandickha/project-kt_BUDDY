@@ -24,23 +24,22 @@ class Calibration:
     closed_ear: float
     shoulder_slouch: float | None
     face_size_ratio: float | None
-    brow_ratio: float | None
     ear_threshold: float
 
     @classmethod
     def from_values(
         cls, open_ear: float, closed_ear: float, shoulder_slouch: float | None,
-        face_size_ratio: float | None, brow_ratio: float | None,
+        face_size_ratio: float | None,
     ) -> Calibration:
         """Build a calibration and derive the EAR threshold."""
-        return cls(open_ear, closed_ear, shoulder_slouch, face_size_ratio, brow_ratio,
+        return cls(open_ear, closed_ear, shoulder_slouch, face_size_ratio,
                    open_ear - THRESHOLD_FRACTION * (open_ear - closed_ear))
 
     @classmethod
     def default(cls, cfg: dict[str, Any]) -> Calibration:
         """Fallback before the wizard has run: config threshold, no posture/distance baseline."""
         c = cfg["calibration"]
-        return cls(float(c["default_open_ear"]), float(c["default_closed_ear"]), None, None, None,
+        return cls(float(c["default_open_ear"]), float(c["default_closed_ear"]), None, None,
                    float(cfg["ear"]["closed_threshold"]))
 
     def to_rows(self) -> dict[str, float]:
@@ -55,7 +54,7 @@ class Calibration:
         base = cls.default(cfg)
         return cls(
             rows["open_ear"], rows["closed_ear"], rows.get("shoulder_slouch"), rows.get("face_size_ratio"),
-            rows.get("brow_ratio"), rows.get("ear_threshold", base.ear_threshold),
+            rows.get("ear_threshold", base.ear_threshold),
         )
 
 
@@ -109,5 +108,4 @@ class CalibrationSession:
             open_ear, closed_ear,
             med([f.shoulder_slouch for f in self._open]),
             med([f.face_size_ratio for f in self._open]),
-            med([f.brow_ratio for f in self._open]),
         )

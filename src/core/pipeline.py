@@ -343,7 +343,7 @@ class Pipeline:
             self.repo.add_stress(StressRow(
                 ts=now, session_id=sid, score=snap.score if snap else None, level=snap.level if snap else None,
                 perclos=round(st.perclos, 4), blink_rate=None if st.blink_rate is None else round(st.blink_rate, 2),
-                yawn_count=st.yawn_count, furrow_ratio=round(st.furrow_ratio, 4), hand_count=st.hand_forehead_count,
+                yawn_count=st.yawn_count, hand_count=st.hand_forehead_count,
                 user_present=not self.engine.habits.away and st.present_ratio > 0,
             ))
         return TickOutput(res, events)

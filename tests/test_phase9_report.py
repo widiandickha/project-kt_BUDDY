@@ -22,7 +22,7 @@ def test_assets_with_and_without_data(qapp, tmp_path: Path) -> None:
     (eval_dir / "metrics.json").write_text(json.dumps({
         "meta": {"split": "test", "label_status": "final"},
         "classes": [{"name": "mata_tertutup", "precision": 0.9, "recall": 0.8, "map50": 0.85},
-                    {"name": "kerutan_dahi", "precision": None, "recall": None, "map50": None}]}))
+                    {"name": "menguap", "precision": None, "recall": None, "map50": None}]}))
     (eval_dir / "events.json").write_text(json.dumps([{"results": [
         {"type": "yawn", "tp": 2, "fp": 1, "fn": 1}, {"type": "hand_to_forehead", "tp": 3, "fp": 0, "fn": 0}]}]))
     (eval_dir / "performance.md").write_text(

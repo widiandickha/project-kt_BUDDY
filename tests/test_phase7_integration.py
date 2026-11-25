@@ -24,7 +24,7 @@ FAST = copy.deepcopy(CFG)  # short windows so real-time tests stay quick
 FAST["score"]["min_window_sec"] = 1
 FAST["habit"]["away_after_sec"] = 0.5
 FAST["inference"]["target_fps"] = 200  # do not cap test frames at 12 fps
-CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)
+CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30)
 
 
 def wait_for(cond, timeout: float = 5.0) -> bool:
@@ -87,7 +87,7 @@ class FakeEar:
             self.fail_times -= 1
             raise RuntimeError("simulated model crash")
         ear = 0.08 if self.closed_every and self.n % self.closed_every < self.closed_every // 2 else 0.31
-        return LandmarkResult(True, ear, ear, ear, 0.1, 0.3, 0.3, (0, 0, 10, 10), (0.5, 0.5))
+        return LandmarkResult(True, ear, ear, ear, 0.1, 0.3, (0, 0, 10, 10), (0.5, 0.5))
 
 
 class FakePose:

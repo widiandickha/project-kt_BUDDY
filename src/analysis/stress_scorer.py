@@ -34,7 +34,6 @@ def normalized_indicators(stats: WindowStats, cfg: dict[str, Any]) -> dict[str, 
     return {
         "perclos": clamp01(stats.perclos / float(n["perclos"])),
         "yawn": clamp01(stats.yawn_count / float(n["yawn"])),
-        "furrow": clamp01(stats.furrow_ratio / float(n["furrow"])),
         "hand": clamp01(stats.hand_forehead_count / float(n["hand"])),
         "blink": clamp01(blink_abnormality(stats.blink_rate, normal) / float(n["blink"])),
         "motion": clamp01(stats.trajectory_motion / float(n["motion"])),

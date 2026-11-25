@@ -20,7 +20,7 @@ from training.common import (
 
 
 def test_class_order_is_final() -> None:
-    assert CLASS_NAMES == ("mata_tertutup", "mata_terbuka", "menguap", "kerutan_dahi")
+    assert CLASS_NAMES == ("mata_tertutup", "mata_terbuka", "menguap")
 
 
 def test_raw_name_round_trip() -> None:

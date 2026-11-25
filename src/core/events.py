@@ -44,7 +44,6 @@ class FrameFeatures:
     user_present: bool
     eye_closed_yolo: float = 0.0
     yawn: float = 0.0
-    brow_furrow: float = 0.0
     ear_left: float | None = None
     ear_right: float | None = None
     ear_mean: float | None = None
@@ -56,7 +55,6 @@ class FrameFeatures:
     # extensions (D-017)
     det_available: bool = False
     mar: float | None = None
-    brow_ratio: float | None = None
     nose_xy: tuple[float, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:

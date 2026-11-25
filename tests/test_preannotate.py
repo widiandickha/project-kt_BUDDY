@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from src.detection.classes import KERUTAN_DAHI, MATA_TERBUKA, MATA_TERTUTUP, MENGUAP
+from src.detection.classes import MATA_TERBUKA, MATA_TERTUTUP, MENGUAP
 from tests.conftest import load_script
 
 W, H = 640, 480
@@ -18,7 +18,7 @@ def pre():
 
 @pytest.fixture()
 def th(pre):
-    return pre.Thresholds(ear_closed=0.18, ear_open=0.24, mar_yawn=0.45, pad_eyes=0.08, pad_mouth=0.06, pad_brow=0.05)
+    return pre.Thresholds(ear_closed=0.18, ear_open=0.24, mar_yawn=0.45, pad_eyes=0.08, pad_mouth=0.06)
 
 
 def face(pre, ear: float, mar: float) -> np.ndarray:
@@ -67,9 +67,3 @@ def test_ambiguous_ear_flagged(pre, th) -> None:
 def test_hint_mismatch_flags(pre, th) -> None:
     assert "hint_menguap_mulut_tertutup" in pre.annotate_points(face(pre, 0.3, 0.1), W, H, "menguap", th).flags
     assert "menguap_tak_terduga" in pre.annotate_points(face(pre, 0.3, 0.6), W, H, "normal", th).flags
-
-
-def test_brow_box_only_for_kerutan_hint(pre, th) -> None:
-    ann = pre.annotate_points(face(pre, 0.3, 0.1), W, H, "kerutan_dahi", th)
-    assert KERUTAN_DAHI in [b.cls for b in ann.boxes]
-    assert KERUTAN_DAHI not in [b.cls for b in pre.annotate_points(face(pre, 0.3, 0.1), W, H, "normal", th).boxes]

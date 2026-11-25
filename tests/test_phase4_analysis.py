@@ -23,7 +23,7 @@ from src.detection.ear_calculator import LandmarkResult
 CFG = load_config()
 FPS = 10
 DT = 1.0 / FPS
-CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)
+CAL = Calibration.from_values(0.31, 0.09, 0.62, 0.30)
 
 
 def frame(ts: float, ear: float = 0.31, present: bool = True, **kw) -> FrameFeatures:
@@ -87,12 +87,11 @@ def test_yawn_not_double_counted_across_ticks() -> None:
     assert win.stats(t).yawn_count == 1
 
 
-def test_hand_count_furrow_ratio_and_motion() -> None:
+def test_hand_count_and_motion() -> None:
     win = SlidingWindow(CFG, 0.21)
-    end = feed(win, 0.0, 40.0, hand_to_forehead=lambda t: t % 10 < 2, brow_furrow=lambda t: 1.0 if t < 20 else 0.0)
+    end = feed(win, 0.0, 40.0, hand_to_forehead=lambda t: t % 10 < 2)
     st = win.stats(end)
     assert st.hand_forehead_count == 4
-    assert st.furrow_ratio == pytest.approx(0.5, abs=0.03)
     assert st.trajectory_motion == pytest.approx(0.0)
 
 
@@ -106,28 +105,28 @@ def test_window_drops_old_samples() -> None:
 # --- scoring -------------------------------------------------------------------
 
 def stats(**kw) -> WindowStats:
-    base = dict(span_sec=60, present_ratio=1.0, perclos=0.0, blink_rate=17.0, yawn_count=0, furrow_ratio=0.0,
+    base = dict(span_sec=60, present_ratio=1.0, perclos=0.0, blink_rate=17.0, yawn_count=0,
                 hand_forehead_ratio=0.0, hand_forehead_count=0, trajectory_motion=0.0, eyes_closed_now=False)
     base.update(kw)
     return WindowStats(**base)
 
 
 def test_normalization_matches_spec_table() -> None:
-    n = normalized_indicators(stats(perclos=0.15, yawn_count=6, furrow_ratio=0.2, hand_forehead_count=2,
+    n = normalized_indicators(stats(perclos=0.15, yawn_count=6, hand_forehead_count=2,
                                     blink_rate=35, trajectory_motion=0.025), CFG)
-    assert n == pytest.approx({"perclos": 0.5, "yawn": 1.0, "furrow": 0.5, "hand": 0.5, "blink": 1.0, "motion": 0.5})
+    assert n == pytest.approx({"perclos": 0.5, "yawn": 1.0, "hand": 0.5, "blink": 1.0, "motion": 0.5})
     assert blink_abnormality(17, (15, 20)) == 0 and blink_abnormality(5, (15, 20)) == 10 and blink_abnormality(None, (15, 20)) == 0
 
 
 def test_max_score_is_100_and_weights_sum() -> None:
     sc = StressScorer(CFG)
-    raw, comp = sc.raw_score(stats(perclos=1, yawn_count=9, furrow_ratio=1, hand_forehead_count=9, blink_rate=60, trajectory_motion=1))
+    raw, comp = sc.raw_score(stats(perclos=1, yawn_count=9, hand_forehead_count=9, blink_rate=60, trajectory_motion=1))
     assert raw == pytest.approx(100.0) and sum(comp.values()) == pytest.approx(100.0)
 
 
 def test_ema_smoothing() -> None:
     sc = StressScorer(CFG)
-    high = stats(perclos=0.3, yawn_count=3, furrow_ratio=0.4, hand_forehead_count=4)
+    high = stats(perclos=0.3, yawn_count=3, hand_forehead_count=4)
     s1 = sc.update(stats(), 0.0)
     s2 = sc.update(high, 1.0)
     assert s1.score == 0.0
@@ -137,10 +136,10 @@ def test_ema_smoothing() -> None:
 def test_hysteresis_up_and_down() -> None:
     sc = StressScorer(CFG)
     sc.alpha = 1.0  # no smoothing: isolate the hysteresis
-    high = stats(perclos=0.3, yawn_count=3, furrow_ratio=0.4, hand_forehead_count=4)  # 85
+    high = stats(perclos=0.3, yawn_count=3, hand_forehead_count=4)  # 80
     levels = [sc.update(high, float(t)).level for t in range(0, 25)]
     assert levels[19] == "rendah" and levels[20] == "tinggi"  # needs 20 s above the threshold
-    low_ok = stats(perclos=0.21)  # 21 points: below 35 but not below 35 - 5? -> below 30 yes
+    low_ok = stats(perclos=0.15)  # 17.5 points: below 35 - 5
     down = [sc.update(low_ok, 25.0 + t).level for t in range(0, 35)]
     assert down[29] == "tinggi" and down[30] == "rendah"  # needs 30 s below threshold - margin
 
@@ -232,7 +231,7 @@ def test_sustained_fires_once_per_episode() -> None:
 # --- calibration & features ------------------------------------------------------
 
 def test_calibration_threshold_formula_and_rows() -> None:
-    cal = Calibration.from_values(0.30, 0.10, 0.6, 0.3, 0.3)
+    cal = Calibration.from_values(0.30, 0.10, 0.6, 0.3)
     assert cal.ear_threshold == pytest.approx(0.30 - 0.4 * 0.20)
     assert Calibration.from_rows(cal.to_rows(), CFG) == cal
     assert Calibration.from_rows({}, CFG) is None
@@ -244,7 +243,7 @@ def test_calibration_session_phases() -> None:
     t = 0.0
     while t < 20.0:
         ear = 0.30 if sess.phase(t) == "open" else 0.08
-        sess.add(FrameFeatures(ts=t, user_present=True, ear_mean=ear, shoulder_slouch=0.6, face_size_ratio=0.3, brow_ratio=0.3))
+        sess.add(FrameFeatures(ts=t, user_present=True, ear_mean=ear, shoulder_slouch=0.6, face_size_ratio=0.3))
         t += DT
     assert sess.phase(20.0) == "done"
     cal = sess.result()
@@ -260,10 +259,10 @@ def test_calibration_fails_without_closed_phase() -> None:
 
 def test_feature_extractor_landmark_fallbacks() -> None:
     fx = FeatureExtractor(CFG, CAL)
-    lm = LandmarkResult(face_found=True, ear_left=0.3, ear_right=0.3, ear_mean=0.3, mar=0.7, brow_ratio=0.25,
+    lm = LandmarkResult(face_found=True, ear_left=0.3, ear_right=0.3, ear_mean=0.3, mar=0.7,
                         face_size_ratio=0.3, nose_xy=(0.5, 0.5))
     f = fx.extract(1.0, lm, faces=None, pose=None)
-    assert f.user_present and f.yawn == 1.0 and f.brow_furrow == 1.0 and not f.det_available
+    assert f.user_present and f.yawn == 1.0 and not f.det_available
     nobody = fx.extract(2.0, LandmarkResult(face_found=False), None, None)
     assert not nobody.user_present and nobody.ear_mean is None
 
@@ -293,20 +292,19 @@ def test_monotonic_counters_for_event_logging() -> None:
 
 
 def test_feature_extractor_landmark_classes_with_yolo() -> None:
-    """D-031: kerutan_dahi is not trained, so it keeps the landmark rule even when YOLO runs."""
+    """Classes listed in det.landmark_classes keep the landmark rule even when YOLO runs."""
     from src.detection.face_detector import FaceDetections
 
     faces = FaceDetections()
-    faces.confidences.update({"mata_tertutup": 0.7, "menguap": 0.9, "kerutan_dahi": 0.0})
-    lm = LandmarkResult(face_found=True, ear_left=0.3, ear_right=0.3, ear_mean=0.3, mar=0.1, brow_ratio=0.25,
+    faces.confidences.update({"mata_tertutup": 0.7, "menguap": 0.0})
+    lm = LandmarkResult(face_found=True, ear_left=0.3, ear_right=0.3, ear_mean=0.3, mar=0.7,
                         face_size_ratio=0.3, nose_xy=(0.5, 0.5))
-    cfg = {**CFG, "det": {**CFG["det"], "landmark_classes": ["kerutan_dahi"]}}
+    cfg = {**CFG, "det": {**CFG["det"], "landmark_classes": ["menguap"]}}
     f = FeatureExtractor(cfg, CAL).extract(1.0, lm, faces=faces, pose=None)
     assert f.det_available and f.eye_closed_yolo == 0.7
-    assert f.yawn == 0.9  # still from YOLO
-    assert f.brow_furrow == 1.0  # from brow ratio vs calibration, not YOLO's 0.0
+    assert f.yawn == 1.0  # from MAR landmark rule, not YOLO's 0.0
     cfg_all = {**CFG, "det": {**CFG["det"], "landmark_classes": []}}
-    assert FeatureExtractor(cfg_all, CAL).extract(1.0, lm, faces=faces, pose=None).brow_furrow == 0.0
+    assert FeatureExtractor(cfg_all, CAL).extract(1.0, lm, faces=faces, pose=None).yawn == 0.0
 
 
 def test_config_rejects_unknown_landmark_class() -> None:

@@ -22,7 +22,6 @@ def test_parse_keeps_max_conf_per_class_and_sorts() -> None:
     assert res.conf("mata_terbuka") == pytest.approx(0.7)
     assert res.conf("mata_tertutup") == pytest.approx(0.9)
     assert res.conf("menguap") == pytest.approx(0.4)
-    assert res.conf("kerutan_dahi") == 0.0
     assert [d.conf for d in res.boxes] == sorted((d.conf for d in res.boxes), reverse=True)
     assert res.boxes[0].xyxy == (1, 1, 5, 5)
 

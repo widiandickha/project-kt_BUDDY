@@ -65,7 +65,7 @@ def architecture(out: Path) -> Path:
     ax.axis("off")
     _box(ax, 0.01, 0.62, 0.13, 0.2, "Webcam\n(frame hanya\ndi memori)")
     _box(ax, 0.18, 0.62, 0.15, 0.2, "Thread A\nCaptureThread\nQueue(maxsize=2)")
-    _box(ax, 0.37, 0.55, 0.2, 0.34, "Thread B · Inferensi\n• MediaPipe → EAR/MAR/alis\n• YOLOv8n-pose → tangan,\n  postur\n• YOLOv8 wajah (opsional)\n→ FrameFeatures")
+    _box(ax, 0.37, 0.55, 0.2, 0.34, "Thread B · Inferensi\n• MediaPipe → EAR/MAR\n• YOLOv8n-pose → tangan,\n  postur\n• YOLOv8 wajah (opsional)\n→ FrameFeatures")
     _box(ax, 0.62, 0.55, 0.2, 0.34, "Analisis (tick 1 s)\n• Sliding window 60 s\n• Skor stres + EMA\n  + hysteresis\n• Habit & presence\n• Tren burnout")
     _box(ax, 0.86, 0.66, 0.13, 0.16, "EventBus\nstress_snapshot\nhabit_alert ...")
     _box(ax, 0.62, 0.12, 0.2, 0.25, "Virtual Buddy\nstate machine 12 ekspresi\nsprite + bubble saran\n(cooldown, eskalasi)", "#FFF7ED")
@@ -129,7 +129,7 @@ def score_timeline(out: Path, cfg: dict[str, Any]) -> Path:
     if not sample.exists():
         make_sample(sample)
     feats = list(read_features(sample))
-    res = replay(feats, AnalysisEngine(cfg, Calibration.from_values(0.31, 0.09, 0.62, 0.30, 0.30)))
+    res = replay(feats, AnalysisEngine(cfg, Calibration.from_values(0.31, 0.09, 0.62, 0.30)))
     t0 = feats[0].ts
     t = [r.ts - t0 for r in res if r.snapshot]
     score = [r.snapshot.score for r in res if r.snapshot]
