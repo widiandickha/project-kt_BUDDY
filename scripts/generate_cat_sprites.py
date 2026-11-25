@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the Virtual Buddy cat (orange tabby, sticker style) for all 12 expressions.
+"""Draw the Virtual Buddy cat (orange tabby, rich sticker style with red collar & bell) for all 12 expressions.
 
     python scripts/generate_cat_sprites.py                    # overwrite src/buddy/assets/cat/<state>.png
     python scripts/generate_cat_sprites.py --out /tmp/cat     # somewhere else
@@ -25,38 +25,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = ROOT / "src" / "buddy" / "assets" / "cat"
 
-FUR, FUR_LIGHT, FUR_SHADE = "#F4A54A", "#FFCB7E", "#DB8530"
-STRIPE, CREAM, OUTLINE = "#C0622A", "#FFF4E2", "#5B3216"
-EAR_IN, NOSE, MOUTH_IN, TONGUE = "#F5A3A6", "#E8677A", "#7A2E36", "#F48B9B"
-IRIS, IRIS_DARK, PUPIL = "#9BCB5C", "#4E8A2C", "#22180F"
-LW = 1.5  # outline width (canvas units)
+FUR, FUR_LIGHT, FUR_SHADE = "#F59E3F", "#FFD58A", "#D87724"
+STRIPE, CREAM, OUTLINE = "#B8551E", "#FFF7EA", "#4A250D"
+EAR_IN, NOSE, MOUTH_IN, TONGUE = "#F79CA2", "#E65F73", "#732630", "#F78697"
+IRIS, IRIS_MID, IRIS_DARK, PUPIL = "#B6E665", "#5AB84B", "#266E2C", "#1E140B"
+COLLAR, COLLAR_SHADE, BELL, BELL_DARK = "#D9383A", "#9E1F22", "#FACC15", "#A16207"
+GLASSES = "#292524"
+LW = 1.6  # outline width (canvas units)
 
 
 @dataclass(frozen=True)
 class Look:
     pose: str = "sit"       # sit | stretch | curl
-    eyes: str = "open"      # open | wide | closed | happy | half
+    eyes: str = "open"      # open | wide | closed | happy | half | sparkle
     mouth: str = "smile"    # smile | open | yawn | flat | none
-    brows: str = "none"     # none | worried
+    brows: str = "none"     # none | worried | up
     ears: str = "normal"    # normal | up | back
     paws: str = "down"      # down | wave | up
     tail: str = "curl"      # curl | up | question
     blush: bool = True
+    accessory: str = "none"  # none | glasses | party
 
 
 LOOKS: dict[str, Look] = {
-    "idle": Look(),
+    "idle": Look(eyes="open", brows="up"),
     "happy": Look(eyes="happy", mouth="open", tail="up"),
     "sleepy": Look(eyes="half", mouth="yawn", ears="back"),
     "worried": Look(brows="worried", mouth="flat", ears="back", blush=False),
-    "alert": Look(eyes="wide", mouth="open", ears="up", tail="up", blush=False),
+    "alert": Look(eyes="wide", mouth="open", ears="up", tail="up", brows="up", blush=False),
     "concerned": Look(brows="worried", mouth="flat"),
     "stretch": Look(pose="stretch", eyes="closed", mouth="open", tail="up"),
-    "curious": Look(eyes="wide", tail="question"),
-    "eye_care": Look(eyes="closed"),
+    "curious": Look(eyes="wide", brows="up", tail="question"),
+    "eye_care": Look(eyes="closed", accessory="glasses"),
     "sleeping": Look(pose="curl", eyes="closed", mouth="none", ears="back"),
     "wake_greet": Look(eyes="happy", mouth="open", paws="wave", tail="up"),
-    "celebrate": Look(eyes="happy", mouth="open", paws="up", tail="up"),
+    "celebrate": Look(eyes="sparkle", mouth="open", paws="up", tail="up", accessory="party"),
 }
 
 
@@ -138,17 +141,50 @@ def _bands(p, path: QPainterPath, ts: tuple[float, ...], w: float) -> None:
         pt = path.pointAtPercent(t)
         a = math.radians(path.angleAtPercent(t))
         nx, ny, h = math.sin(a), math.cos(a), w / 2 - 0.4
-        _stroke(p, _path(("M", pt.x() - nx * h, pt.y() - ny * h), ("L", pt.x() + nx * h, pt.y() + ny * h)), STRIPE, 1.9)
+        _stroke(p, _path(("M", pt.x() - nx * h, pt.y() - ny * h), ("L", pt.x() + nx * h, pt.y() + ny * h)), STRIPE, 2.0)
 
 
 def _shadow(p, cx: float, rx: float) -> None:
-    _fill(p, _ellipse(cx, 95.8, rx, 2.8), QColor(70, 35, 10, 45), outline=False)
+    g = QtGui.QRadialGradient(QPointF(cx, 95.8), rx)
+    g.setColorAt(0.0, QColor(65, 30, 8, 70))
+    g.setColorAt(0.75, QColor(65, 30, 8, 30))
+    g.setColorAt(1.0, QColor(65, 30, 8, 0))
+    _fill(p, _ellipse(cx, 95.8, rx, 3.2), QBrush(g), outline=False)
 
 
-def _paw(p, cx: float, cy: float, rx: float = 5.6, ry: float = 3.6) -> None:
+def _paw(p, cx: float, cy: float, rx: float = 5.8, ry: float = 3.8) -> None:
     _fill(p, _ellipse(cx, cy, rx, ry), CREAM)
-    for dx in (-1.7, 1.7):
-        _stroke(p, _path(("M", cx + dx, cy - 1.0), ("L", cx + dx, cy + ry - 0.6)), OUTLINE, 0.8)
+    for dx in (-1.8, 1.8):
+        _stroke(p, _path(("M", cx + dx, cy - 0.8), ("L", cx + dx, cy + ry - 0.5)), OUTLINE, 0.85)
+
+
+def _collar_and_bell(p, cx: float, cy: float, rx: float = 13.5, ry: float = 4.2) -> None:
+    """Red collar with a golden bell around the neck."""
+    collar = _path(
+        ("M", cx - rx, cy - 2.0),
+        ("Q", cx, cy + ry, cx + rx, cy - 2.0),
+        ("Q", cx + rx + 1.0, cy + 1.0, cx + rx - 0.5, cy + 2.4),
+        ("Q", cx, cy + ry + 3.8, cx - rx + 0.5, cy + 2.4),
+        ("Q", cx - rx - 1.0, cy + 1.0, cx - rx, cy - 2.0),
+        ("Z",),
+    )
+    g = QtGui.QLinearGradient(cx - rx, cy, cx + rx, cy)
+    g.setColorAt(0.0, QColor(COLLAR_SHADE))
+    g.setColorAt(0.5, QColor(COLLAR))
+    g.setColorAt(1.0, QColor(COLLAR_SHADE))
+    _fill(p, collar, QBrush(g), w=1.15)
+
+    # Golden bell hanging from the collar
+    by = cy + ry + 1.2
+    bg = QtGui.QRadialGradient(QPointF(cx - 1.1, by - 1.3), 5.0)
+    bg.setColorAt(0.0, QColor("#FEF08A"))
+    bg.setColorAt(0.6, QColor(BELL))
+    bg.setColorAt(1.0, QColor("#CA8A04"))
+    _fill(p, _ellipse(cx, by, 3.8, 3.7), QBrush(bg), w=1.05)
+    _stroke(p, _path(("M", cx - 3.5, by - 0.3), ("Q", cx, by + 0.6, cx + 3.5, by - 0.3)), BELL_DARK, 0.9)
+    _fill(p, _ellipse(cx, by + 1.3, 0.95, 0.95), OUTLINE, outline=False)
+    _stroke(p, _path(("M", cx, by + 1.9), ("L", cx, by + 3.3)), OUTLINE, 0.85)
+    _fill(p, _ellipse(cx - 1.3, by - 1.4, 0.8, 0.6), "#FFFFFF", outline=False)
 
 
 # --- head ---------------------------------------------------------------------------------
@@ -161,65 +197,131 @@ def _ears(p, kind: str) -> None:
         if kind == "back":
             p.rotate(-26)
         elif kind == "up":
-            p.scale(1.0, 1.14)
+            p.scale(1.0, 1.15)
         p.translate(13.5, 12)
-        outer = _path(("M", -22.5, -5), ("L", -24.6, -28), ("Q", -25.2, -32.6, -21.2, -30.2), ("L", -4.5, -16.5), ("Z",))
-        _fill(p, outer, FUR)
-        inner = _path(("M", -20, -9), ("L", -21.6, -25.5), ("Q", -21.5, -27, -20, -26), ("L", -9.5, -16.8), ("Z",))
+        outer = _path(
+            ("M", -22.5, -5),
+            ("L", -25.0, -28.5),
+            ("Q", -25.4, -33.2, -21.0, -30.5),
+            ("L", -4.2, -16.5),
+            ("Z",),
+        )
+        _fill(p, outer, _fur(-32, -4))
+        inner = _path(
+            ("M", -19.8, -9),
+            ("L", -21.8, -25.8),
+            ("Q", -21.7, -27.3, -20.0, -26.2),
+            ("L", -9.2, -16.8),
+            ("Z",),
+        )
         _fill(p, inner, EAR_IN, outline=False)
+        # Ear fluff tufts
+        fluff = _path(("M", -19.5, -9.5), ("Q", -16.5, -13.5, -15.2, -11.2), ("Q", -13.5, -14.0, -10.5, -12.5))
+        _stroke(p, fluff, CREAM, 1.3)
         p.restore()
+
+
+def _star_shape(cx: float, cy: float, r: float) -> QPainterPath:
+    path = QPainterPath()
+    for i in range(8):
+        rr = r if i % 2 == 0 else r * 0.38
+        a = math.pi / 4 * i - math.pi / 2
+        x, y = cx + rr * math.cos(a), cy + rr * math.sin(a)
+        if i == 0:
+            path.moveTo(x, y)
+        else:
+            path.lineTo(x, y)
+    path.closeSubpath()
+    return path
 
 
 def _eye(p, x: float, y: float, kind: str) -> None:
-    if kind == "closed":  # content, U shape
-        _stroke(p, _path(("M", x - 4.4, y - 0.6), ("Q", x, y + 3.2, x + 4.4, y - 0.6)), OUTLINE, 1.6)
+    if kind == "closed":  # content, U shape with cute lashes
+        _stroke(p, _path(("M", x - 4.6, y - 0.6), ("Q", x, y + 3.4, x + 4.6, y - 0.6)), OUTLINE, 1.7)
+        sx = 1 if x > 0 else -1
+        _stroke(p, _path(("M", x + sx * 4.2, y - 0.3), ("L", x + sx * 5.6, y - 1.3)), OUTLINE, 1.2)
         return
-    if kind == "happy":  # ^ shape
-        _stroke(p, _path(("M", x - 4.4, y + 1.6), ("Q", x, y - 3.4, x + 4.4, y + 1.6)), OUTLINE, 1.6)
+    if kind == "happy":  # ^ joyful arch
+        _stroke(p, _path(("M", x - 4.6, y + 1.7), ("Q", x, y - 3.8, x + 4.6, y + 1.7)), OUTLINE, 1.8)
         return
-    wide = kind == "wide"
-    rx, ry = (5.4, 6.0) if wide else (4.4, 5.2)
+    wide = kind in ("wide", "sparkle")
+    rx, ry = (5.6, 6.2) if wide else (4.8, 5.5)
     eye = _ellipse(x, y, rx, ry)
-    g = QtGui.QRadialGradient(QPointF(x, y - ry * 0.4), ry * 1.3)
+    g = QtGui.QRadialGradient(QPointF(x, y + ry * 0.25), ry * 1.35)
     g.setColorAt(0.0, QColor(IRIS))
+    g.setColorAt(0.55, QColor(IRIS_MID))
     g.setColorAt(1.0, QColor(IRIS_DARK))
-    _fill(p, eye, QBrush(g), w=1.1)
-    pupil = _ellipse(x, y, 3.0, 3.2) if wide else _ellipse(x, y + 0.2, 1.8, 3.9)
+    _fill(p, eye, QBrush(g), w=1.25)
+
+    pupil = _ellipse(x, y, 3.3, 3.6) if wide else _ellipse(x, y + 0.15, 2.3, 4.1)
     _fill(p, pupil, PUPIL, outline=False)
-    hl = 1.7 if wide else 1.35
-    _fill(p, _ellipse(x - rx * 0.33, y - ry * 0.38, hl, hl), "#FFFFFF", outline=False)
-    _fill(p, _ellipse(x + rx * 0.32, y + ry * 0.38, hl * 0.45, hl * 0.45), "#FFFFFF", outline=False)
-    if kind == "half":  # heavy eyelid over the top half
+
+    # Dual anime-style catchlights
+    hl = 1.85 if wide else 1.55
+    _fill(p, _ellipse(x - rx * 0.32, y - ry * 0.36, hl, hl), "#FFFFFF", outline=False)
+    _fill(p, _ellipse(x + rx * 0.30, y + ry * 0.34, hl * 0.52, hl * 0.52), "#FFFFFF", outline=False)
+    if kind == "sparkle":
+        _fill(p, _star_shape(x + rx * 0.15, y - ry * 0.12, 1.5), "#FEF08A", outline=False)
+
+    if kind == "half":  # heavy sleepy eyelid over the top half
         p.save()
         p.setClipPath(eye)
-        _fill(p, _path(("M", x - 7, y - 7), ("L", x + 7, y - 7), ("L", x + 7, y - 0.4),
-                       ("Q", x, y - 1.6, x - 7, y - 0.4), ("Z",)), FUR_SHADE, outline=False)
+        _fill(p, _path(("M", x - 7, y - 7), ("L", x + 7, y - 7), ("L", x + 7, y - 0.2),
+                       ("Q", x, y - 1.5, x - 7, y - 0.2), ("Z",)), FUR_SHADE, outline=False)
         p.restore()
-        _stroke(p, _path(("M", x - 4.8, y - 0.5), ("Q", x, y - 1.7, x + 4.8, y - 0.5)), OUTLINE, 1.4)
+        _stroke(p, _path(("M", x - 5.0, y - 0.3), ("Q", x, y - 1.6, x + 5.0, y - 0.3)), OUTLINE, 1.5)
 
 
 def _mouth(p, kind: str) -> None:
     philtrum_end = 9.6 if kind in ("open", "yawn") else 9.0
-    _stroke(p, _path(("M", 0, 7.6), ("L", 0, philtrum_end)), OUTLINE, 1.0)
+    _stroke(p, _path(("M", 0, 7.5), ("L", 0, philtrum_end)), OUTLINE, 1.05)
     if kind in ("smile", "none"):
-        k = 1.0 if kind == "smile" else 0.7
+        k = 1.05 if kind == "smile" else 0.72
         for sx in (-1, 1):
-            _stroke(p, _path(("M", 0, 9), ("Q", 0, 9 + 1.8 * k, sx * 2.4 * k, 9 + 1.8 * k),
-                             ("Q", sx * 4.2 * k, 9 + 1.7 * k, sx * 4.8 * k, 9 + 0.6 * k)), OUTLINE, 1.1)
+            _stroke(p, _path(("M", 0, 9), ("Q", 0, 9 + 1.9 * k, sx * 2.5 * k, 9 + 1.9 * k),
+                             ("Q", sx * 4.4 * k, 9 + 1.8 * k, sx * 5.0 * k, 9 + 0.5 * k)), OUTLINE, 1.2)
     elif kind == "flat":
-        _stroke(p, _path(("M", -3.2, 10.8), ("Q", -1.6, 10.0, 0, 10.6), ("Q", 1.6, 11.2, 3.2, 10.4)), OUTLINE, 1.1)
+        _stroke(p, _path(("M", -3.4, 10.9), ("Q", -1.6, 10.0, 0, 10.6), ("Q", 1.6, 11.2, 3.4, 10.4)), OUTLINE, 1.15)
     elif kind in ("open", "yawn"):
         if kind == "open":
-            m = _path(("M", -3.8, 9.6), ("Q", 0, 11.0, 3.8, 9.6), ("Q", 3.6, 15.2, 0, 15.5), ("Q", -3.6, 15.2, -3.8, 9.6), ("Z",))
-            tongue = _ellipse(0, 14.8, 2.7, 1.9)
+            m = _path(("M", -4.0, 9.6), ("Q", 0, 11.0, 4.0, 9.6), ("Q", 3.8, 15.5, 0, 15.8), ("Q", -3.8, 15.5, -4.0, 9.6), ("Z",))
+            tongue = _ellipse(0, 15.0, 2.9, 2.0)
         else:
-            m = _ellipse(0, 14.4, 4.4, 5.0)
-            tongue = _ellipse(0, 18.0, 3.3, 2.3)
-        _fill(p, m, MOUTH_IN, w=1.0)
+            m = _ellipse(0, 14.4, 4.5, 5.1)
+            tongue = _ellipse(0, 18.0, 3.4, 2.4)
+        _fill(p, m, MOUTH_IN, w=1.05)
         p.save()
         p.setClipPath(m)
         _fill(p, tongue, TONGUE, outline=False)
         p.restore()
+        if kind == "open":
+            # tiny cute fang
+            _fill(p, _path(("M", -2.9, 9.9), ("L", -2.1, 11.4), ("L", -1.4, 10.1), ("Z",)), "#FFFFFF", outline=False)
+
+
+def _glasses(p) -> None:
+    """Cozy round eye-care glasses."""
+    for sx in (-1, 1):
+        cx, cy = sx * 9.8, -0.4
+        lens = _ellipse(cx, cy, 6.4, 5.8)
+        _fill(p, lens, QColor(186, 230, 253, 55), outline=True, w=1.35)
+        _stroke(p, lens, GLASSES, 1.45)
+        # lens reflection
+        _stroke(p, _path(("M", cx - 3.6, cy - 2.6), ("L", cx - 1.4, cy - 3.8)), QColor(255, 255, 255, 190), 1.0)
+    _stroke(p, _path(("M", -3.4, -0.6), ("Q", 0, -2.0, 3.4, -0.6)), GLASSES, 1.35)
+
+
+def _party_hat(p) -> None:
+    """Festive crown/hat for celebrate expression."""
+    hat = _path(("M", -8.0, -18.5), ("L", 0, -34.0), ("L", 8.0, -18.5), ("Q", 0, -16.5, -8.0, -18.5), ("Z",))
+    g = QtGui.QLinearGradient(-6, -34, 6, -18)
+    g.setColorAt(0.0, QColor("#EC4899"))
+    g.setColorAt(0.5, QColor("#8B5CF6"))
+    g.setColorAt(1.0, QColor("#6366F1"))
+    _fill(p, hat, QBrush(g), w=1.15)
+    _stroke(p, _path(("M", -5.2, -23.5), ("Q", 0, -22.0, 5.2, -23.5)), "#FDE047", 1.6)
+    _stroke(p, _path(("M", -2.8, -28.5), ("Q", 0, -27.5, 2.8, -28.5)), "#67E8F9", 1.4)
+    _fill(p, _ellipse(0, -34.8, 2.6, 2.6), "#FDE047", w=0.9)
 
 
 def _head(p, lk: Look, cx: float, cy: float, scale: float = 1.0, tilt: float = 0.0) -> None:
@@ -228,41 +330,76 @@ def _head(p, lk: Look, cx: float, cy: float, scale: float = 1.0, tilt: float = 0
     p.rotate(tilt)
     p.scale(scale, scale)
     _ears(p, lk.ears)
-    head = _path(("M", 0, -20), ("C", 16, -20, 25, -11, 25, 0), ("C", 25, 4, 26.5, 6, 28, 8.5), ("L", 23.6, 8.9),
-                 ("L", 25.4, 12), ("C", 20, 17.5, 10, 20, 0, 20), ("C", -10, 20, -20, 17.5, -25.4, 12),
-                 ("L", -23.6, 8.9), ("L", -28, 8.5), ("C", -26.5, 6, -25, 4, -25, 0), ("C", -25, -11, -16, -20, 0, -20), ("Z",))
-    g = QtGui.QRadialGradient(QPointF(0, -7), 31)
+    head = _path(
+        ("M", 0, -20.2),
+        ("C", 16.5, -20.2, 25.4, -11, 25.4, 0),
+        ("C", 25.4, 4, 27.0, 6, 28.6, 8.6),
+        ("L", 24.0, 9.0),
+        ("L", 25.8, 12.2),
+        ("C", 20.5, 17.8, 10.5, 20.4, 0, 20.4),
+        ("C", -10.5, 20.4, -20.5, 17.8, -25.8, 12.2),
+        ("L", -24.0, 9.0),
+        ("L", -28.6, 8.6),
+        ("C", -27.0, 6, -25.4, 4, -25.4, 0),
+        ("C", -25.4, -11, -16.5, -20.2, 0, -20.2),
+        ("Z",),
+    )
+    g = QtGui.QRadialGradient(QPointF(0, -7.5), 32)
     g.setColorAt(0.0, QColor(FUR_LIGHT))
     g.setColorAt(0.55, QColor(FUR))
     g.setColorAt(1.0, QColor(FUR_SHADE))
     _fill(p, head, QBrush(g))
-    # tabby marks: forehead and cheeks
-    for path in (_path(("M", 0, -19), ("L", 0, -13.6)), _path(("M", -6, -18.6), ("Q", -5.3, -16, -4.5, -13.8)),
-                 _path(("M", 6, -18.6), ("Q", 5.3, -16, 4.5, -13.8))):
-        _stroke(p, path, STRIPE, 2.0)
+
+    # Top head tuft
+    tuft = _path(("M", -3.2, -19.8), ("Q", -1.2, -23.4, 0.2, -20.6), ("Q", 2.0, -23.0, 3.4, -19.8))
+    _stroke(p, tuft, FUR_LIGHT, 1.6)
+
+    # Classic tabby "M" forehead marking and cheek stripes
+    for path in (
+        _path(("M", 0, -18.8), ("L", 0, -13.2)),
+        _path(("M", -6.4, -18.4), ("Q", -5.2, -15.4, -4.2, -13.4)),
+        _path(("M", 6.4, -18.4), ("Q", 5.2, -15.4, 4.2, -13.4)),
+    ):
+        _stroke(p, path, STRIPE, 2.15)
     for sx in (-1, 1):
-        _stroke(p, _path(("M", sx * 24.4, 1.4), ("L", sx * 20.2, 2.4)), STRIPE, 1.7)
-        _stroke(p, _path(("M", sx * 24.8, 4.8), ("L", sx * 20.8, 5.4)), STRIPE, 1.7)
-    # muzzle, blush, eyes, brows
+        _stroke(p, _path(("M", sx * 24.6, 1.4), ("L", sx * 20.0, 2.5)), STRIPE, 1.75)
+        _stroke(p, _path(("M", sx * 25.0, 4.9), ("L", sx * 20.6, 5.5)), STRIPE, 1.75)
+
+    # Soft cream muzzle & chin highlight
+    _fill(p, _ellipse(0, 11.4, 8.8, 5.5), CREAM, outline=False)
     for sx in (-1, 1):
-        _fill(p, _ellipse(sx * 3.7, 9.2, 5.1, 3.9), CREAM, outline=False)
+        _fill(p, _ellipse(sx * 3.9, 9.2, 5.4, 4.1), CREAM, outline=False)
+
     if lk.blush:
         for sx in (-1, 1):
-            _fill(p, _ellipse(sx * 14.8, 8.6, 3.9, 2.3), QColor(255, 120, 120, 95), outline=False)
+            _fill(p, _ellipse(sx * 15.2, 8.5, 4.3, 2.5), QColor(255, 105, 120, 110), outline=False)
+
     for sx in (-1, 1):
         _eye(p, sx * 9.6, -0.6, lk.eyes)
+
     if lk.brows == "worried":
         for sx in (-1, 1):
-            _stroke(p, _path(("M", sx * 13.4, -7.6), ("Q", sx * 10.2, -8.6, sx * 6.6, -10.4)), OUTLINE, 1.3)
-    # whiskers
+            _stroke(p, _path(("M", sx * 13.8, -7.4), ("Q", sx * 10.2, -8.6, sx * 6.4, -10.6)), OUTLINE, 1.35)
+    elif lk.brows == "up":
+        for sx in (-1, 1):
+            _fill(p, _ellipse(sx * 9.2, -8.4, 2.2, 1.15), CREAM, outline=False)
+
+    if lk.accessory == "glasses":
+        _glasses(p)
+    elif lk.accessory == "party":
+        _party_hat(p)
+
+    # Whiskers
     wc = QColor(OUTLINE)
-    wc.setAlpha(170)
+    wc.setAlpha(185)
     for sx in (-1, 1):
         for ey in (5.0, 8.6, 12.2):
-            _stroke(p, _path(("M", sx * 11.5, 7.6 + (ey - 8.6) * 0.25), ("Q", sx * 20, ey - 0.6, sx * 29, ey)), wc, 0.6)
-    # nose and mouth
-    _fill(p, _path(("M", -2.3, 5.0), ("L", 2.3, 5.0), ("Q", 2.9, 5.2, 2.3, 5.9), ("L", 0.5, 7.6),
-                   ("Q", 0, 8.1, -0.5, 7.6), ("L", -2.3, 5.9), ("Q", -2.9, 5.2, -2.3, 5.0), ("Z",)), NOSE, w=0.7)
+            _stroke(p, _path(("M", sx * 11.5, 7.6 + (ey - 8.6) * 0.25), ("Q", sx * 20.5, ey - 0.6, sx * 29.8, ey)), wc, 0.68)
+
+    # Nose with tiny highlight
+    _fill(p, _path(("M", -2.4, 5.0), ("L", 2.4, 5.0), ("Q", 3.0, 5.2, 2.4, 6.0), ("L", 0.5, 7.7),
+                   ("Q", 0, 8.2, -0.5, 7.7), ("L", -2.4, 6.0), ("Q", -3.0, 5.2, -2.4, 5.0), ("Z",)), NOSE, w=0.75)
+    _fill(p, _ellipse(-0.8, 5.6, 0.7, 0.35), QColor(255, 255, 255, 170), outline=False)
     _mouth(p, lk.mouth)
     p.restore()
 
@@ -276,50 +413,52 @@ def _tail(p, kind: str) -> None:
         t = _path(("M", 62, 90), ("C", 80, 92, 86, 76, 80, 62), ("C", 76, 52, 88, 44, 90, 52))
     else:
         t = _path(("M", 62, 90), ("C", 80, 94, 90, 78, 84, 64), ("Q", 81, 57, 76, 60))
-    _thick(p, t, 7.6)
-    _bands(p, t, (0.58, 0.74, 0.9), 7.6)
+    _thick(p, t, 7.8)
+    _bands(p, t, (0.56, 0.72, 0.88), 7.8)
 
 
 def _arm(p, sx: int) -> None:
     arm = _path(("M", 50 + sx * 8, 63), ("Q", 50 + sx * 24, 62, 50 + sx * 29, 47))
-    _thick(p, arm, 8.6)
+    _thick(p, arm, 8.8)
     cx, cy = 50 + sx * 29.4, 43.6
-    _fill(p, _ellipse(cx, cy, 5.4, 5.0), CREAM)
-    _fill(p, _ellipse(cx, cy + 1.0, 2.3, 1.8), EAR_IN, outline=False)
+    _fill(p, _ellipse(cx, cy, 5.6, 5.2), CREAM)
+    _fill(p, _ellipse(cx, cy + 1.0, 2.4, 1.9), EAR_IN, outline=False)
     for dx, dy in ((-2.7, -2.2), (0, -3.3), (2.7, -2.2)):
-        _fill(p, _ellipse(cx + dx, cy + dy, 1.05, 1.05), EAR_IN, outline=False)
+        _fill(p, _ellipse(cx + dx, cy + dy, 1.1, 1.1), EAR_IN, outline=False)
 
 
 def _sit(p, lk: Look) -> None:
-    _shadow(p, 50, 27)
+    _shadow(p, 50, 28)
     _tail(p, lk.tail)
-    body = _path(("M", 37, 54), ("C", 26, 61, 21, 80, 25, 91), ("Q", 27, 95.6, 35, 95.6), ("L", 65, 95.6),
-                 ("Q", 73, 95.6, 75, 91), ("C", 79, 80, 74, 61, 63, 54), ("Z",))
+    body = _path(("M", 37, 54), ("C", 25.5, 61, 20.5, 80, 24.8, 91), ("Q", 27, 95.6, 35, 95.6), ("L", 65, 95.6),
+                 ("Q", 73, 95.6, 75.2, 91), ("C", 79.5, 80, 74.5, 61, 63, 54), ("Z",))
     _fill(p, body, _fur(50, 96))
     for sx in (-1, 1):
         _fill(p, _ellipse(50 + sx * 17.5, 87.6, 9.6, 8.0), _fur(79, 96))
         for y in (66, 72, 78):
-            _stroke(p, _path(("M", 50 + sx * 23.6, y), ("Q", 50 + sx * 20, y - 1.2, 50 + sx * 17.2, y + 1.0)), STRIPE, 2.1)
-    _fill(p, _ellipse(50, 67, 10.5, 11.5), CREAM, outline=False)
+            _stroke(p, _path(("M", 50 + sx * 23.6, y), ("Q", 50 + sx * 20, y - 1.2, 50 + sx * 17.2, y + 1.0)), STRIPE, 2.15)
+    # Fluffy chest patch
+    _fill(p, _ellipse(50, 68, 11.2, 12.2), CREAM, outline=False)
     raised = {"wave": {1}, "up": {-1, 1}}.get(lk.paws, set())
     for sx in (-1, 1):
         if sx in raised:
             continue
         x = 50 + sx * 6.2
         leg = QPainterPath()
-        leg.addRoundedRect(QRectF(x - 4.6, 70, 9.2, 23.5), 4.6, 4.6)
+        leg.addRoundedRect(QRectF(x - 4.7, 70, 9.4, 23.5), 4.7, 4.7)
         _fill(p, leg, _fur(70, 94))
         _paw(p, x, 92.6)
-    _head(p, lk, 50, 40)
+    _collar_and_bell(p, 50, 58.2, 14.2, 4.2)
+    _head(p, lk, 50, 39.2)
     for sx in sorted(raised):
         _arm(p, sx)
 
 
 def _stretch(p, lk: Look) -> None:
-    _shadow(p, 50, 40)
+    _shadow(p, 50, 41)
     t = _path(("M", 80, 70), ("C", 90, 66, 93, 54, 87, 45), ("Q", 84.5, 41, 88.5, 37.5))
-    _thick(p, t, 7.4)
-    _bands(p, t, (0.55, 0.72, 0.9), 7.4)
+    _thick(p, t, 7.6)
+    _bands(p, t, (0.55, 0.72, 0.9), 7.6)
     hind = QPainterPath()
     hind.addRoundedRect(QRectF(73.6, 78, 9.6, 16), 4.8, 4.8)
     _fill(p, hind, _fur(78, 95))
@@ -328,7 +467,7 @@ def _stretch(p, lk: Look) -> None:
                  ("C", 24, 95.6, 20, 92, 20, 86), ("Z",))
     _fill(p, body, _fur(60, 96))
     for x, y in ((56, 73.5), (62, 68.5), (69, 63.5)):
-        _stroke(p, _path(("M", x, y), ("Q", x + 1.6, y + 2.6, x + 1.0, y + 5.2)), STRIPE, 2.1)
+        _stroke(p, _path(("M", x, y), ("Q", x + 1.6, y + 2.6, x + 1.0, y + 5.2)), STRIPE, 2.15)
     _fill(p, _ellipse(36, 89, 12, 5.2), CREAM, outline=False)
     _paw(p, 79.5, 93.4, 5.4, 3.2)
     for y in (86.6, 91.4):
@@ -336,20 +475,21 @@ def _stretch(p, lk: Look) -> None:
         arm.addRoundedRect(QRectF(6.5, y - 3.6, 26, 7.2), 3.6, 3.6)
         _fill(p, arm, _fur(y - 4, y + 4))
         _paw(p, 9.2, y, 4.8, 3.4)
+    _collar_and_bell(p, 30, 81.5, 9.5, 3.0)
     _head(p, lk, 28, 69, scale=0.8, tilt=-8)
 
 
 def _curl(p, lk: Look) -> None:
-    _shadow(p, 52, 38)
+    _shadow(p, 52, 39)
     body = _path(("M", 20, 86), ("C", 20, 70, 40, 63, 58, 63), ("C", 76, 63, 89, 72, 89, 84),
                  ("C", 89, 92, 85, 95.6, 77, 95.6), ("L", 30, 95.6), ("C", 24, 95.6, 20, 92, 20, 86), ("Z",))
     _fill(p, body, _fur(62, 96))
     for x in (54, 62, 70, 78):
-        _stroke(p, _path(("M", x, 64.2 + (x - 54) * 0.12), ("Q", x + 1.5, 67.5, x + 0.6, 70.5)), STRIPE, 2.1)
+        _stroke(p, _path(("M", x, 64.2 + (x - 54) * 0.12), ("Q", x + 1.5, 67.5, x + 0.6, 70.5)), STRIPE, 2.15)
     _paw(p, 42, 91.6, 5.2, 3.2)
     t = _path(("M", 87, 87), ("C", 84, 97.5, 56, 98.2, 38, 94.4))
-    _thick(p, t, 7.2)
-    _bands(p, t, (0.55, 0.72, 0.88), 7.2)
+    _thick(p, t, 7.4)
+    _bands(p, t, (0.55, 0.72, 0.88), 7.4)
     _head(p, lk, 31, 75.5, scale=0.78, tilt=-10)
 
 

@@ -1,5 +1,5 @@
-"""Daily dashboard (spec FASE 6): summary cards, stress per hour, breaks over 7 days,
-7-day comparison, automatic insights, CSV export.
+"""Daily dashboard (spec FASE 6): hero card with cat & daily conclusion, summary cards,
+stress per hour, breaks & 7-day trend, automatic insights, and CSV export.
 
     python -m src.ui.dashboard                  # real database (data/stress_buddy.db)
     python -m src.ui.dashboard --demo-data      # temporary database with 7 days of dummy data
@@ -16,7 +16,7 @@ from typing import Any
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import QDate, QRectF, Qt, Signal, Signal
+from PySide6.QtCore import QDate, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -68,24 +68,80 @@ def health_band(score: float | None) -> tuple[str, str]:
     if score is None:
         return "Belum ada data", theme.BORDER_STRONG
     if score >= 80:
-        return "Baik", theme.LEVEL_COLORS["rendah"]
+        return "Sehat", theme.LEVEL_COLORS["rendah"]
     if score >= 60:
         return "Cukup", theme.LEVEL_COLORS["sedang"]
-    return "Perlu perhatian", theme.LEVEL_COLORS["tinggi"]
+    return "Perlu istirahat", theme.LEVEL_COLORS["tinggi"]
 
 
 def buddy_message(t: ds.DailySummary | None) -> tuple[str, str]:
-    """(cat sprite, sentence) shown in the hero card."""
+    """(cat sprite, headline sentence) shown in the hero card."""
     if t is None or t.work_minutes <= 0:
-        return "sleeping", "Belum ada data untuk hari ini. Nyalakan Stress Buddy dan aku akan menemanimu."
+        return "sleeping", "Belum ada data hari ini. Nyalakan kamera dan aku siap menemanimu bekerja!"
     if t.burnout_flag:
-        return "worried", "Stres tinggi bertahan berjam-jam. Ambil jeda yang cukup panjang, ya."
+        return "worried", "Hari ini sepertinya kamu sangat kelelahan dan butuh istirahat lebih panjang."
     hs = t.health_score or 0.0
-    if hs >= 80:
-        return "happy", "Hari yang bagus! Ritme kerja dan istirahatmu seimbang."
-    if hs >= 60:
-        return "idle", "Lumayan. Coba selipkan jeda singkat lebih sering."
-    return "concerned", "Hari yang berat. Istirahat sejenak dan regangkan badan, ya."
+    avg = t.avg_stress or 0.0
+    if hs >= 80 and avg < 35:
+        return "celebrate", "Kerja bagus hari ini! Ritme fokus dan waktu istirahatmu sangat seimbang."
+    if hs >= 65:
+        return "happy", "Kondisi kerjamu hari ini cukup terjaga, tetap sisipkan jeda singkat ya."
+    if avg >= 60 or t.longest_stretch_min >= 90:
+        return "concerned", "Hari ini sepertinya kamu perlu istirahat lebih banyak. Jangan paksakan mata dan badanmu."
+    return "idle", "Hari yang cukup padat. Yuk, regangkan bahu dan istirahatkan mata sejenak."
+
+
+def daily_conclusion(t: ds.DailySummary | None, cfg: dict[str, Any]) -> tuple[str, list[str]]:
+    """Build a clear daily conclusion paragraph and up to 3 actionable takeaway pills."""
+    if t is None or t.work_minutes <= 0:
+        return (
+            "Belum ada aktivitas kerja yang terekam pada tanggal ini. Biarkan Stress Buddy aktif di latar belakang "
+            "saat kamu bekerja agar kesimpulan kebiasaan dan tingkat kelelahanmu muncul otomatis di sini.",
+            ["🐾 Kamera siap memantau secara lokal"],
+        )
+
+    work_str = fmt_minutes(t.work_minutes)
+    avg = t.avg_stress or 0.0
+    lv = stress_level(t.avg_stress, cfg) or "rendah"
+    target_break = int(cfg["habit"]["work_break_min"])
+
+    # Main narrative summary
+    if t.burnout_flag or lv == "tinggi":
+        summary = (
+            f"Selama {work_str} bekerja hari ini, rata-rata stres berada di level Tinggi ({avg:.0f}/100)"
+            + (f" dengan puncak pada pukul {t.peak_time}." if t.peak_time else ".")
+            + " Hari ini sepertinya tubuh dan matamu perlu istirahat lebih lama sebelum kembali beraktivitas."
+        )
+    elif lv == "sedang":
+        summary = (
+            f"Kamu telah bekerja selama {work_str} dengan rata-rata stres Sedang ({avg:.0f}/100). "
+            "Beban kerja mulai terasa—sebaiknya ambil jeda singkat lebih rutin agar tidak menumpuk menjadi kelelahan."
+        )
+    else:
+        summary = (
+            f"Kamu telah bekerja selama {work_str} dengan rata-rata stres Rendah ({avg:.0f}/100). "
+            "Kondisi fisik dan fokusmu terpantau tenang sepanjang sesi."
+        )
+
+    # Actionable recommendations
+    tips: list[str] = []
+    if t.longest_stretch_min > target_break:
+        tips.append(f"⏳ Duduk {fmt_minutes(t.longest_stretch_min)} tanpa jeda — usahakan rehat tiap {target_break} menit")
+    elif t.break_count > 0:
+        tips.append(f"☕ Sudah {t.break_count}× istirahat cukup — kebiasaan jeda yang baik")
+    elif t.work_minutes >= target_break:
+        tips.append("☕ Belum ada istirahat ≥ 5 menit — sempatkan berdiri & minum air")
+
+    if t.yawn_total >= 3:
+        tips.append(f"🥱 Menguap {t.yawn_total}× — tanda mengantuk, istirahatkan mata sejenak")
+    if t.bad_posture_minutes >= 6:
+        tips.append(f"🪑 Postur membungkuk {fmt_minutes(t.bad_posture_minutes)} — tegakkan punggung & atur tinggi layar")
+    if t.advice_count > 0:
+        tips.append(f"💬 {t.advice_followed} dari {t.advice_count} saran kucing diikuti")
+
+    if not tips:
+        tips.append("✨ Ritme kerja dan postur hari ini sudah baik, pertahankan!")
+    return summary, tips[:3]
 
 
 def insight_icon(text: str) -> str:
@@ -104,7 +160,7 @@ class HealthRing(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.score: float | None = None
-        self.setMinimumSize(150, 150)
+        self.setMinimumSize(145, 145)
 
     def set_score(self, score: float | None) -> None:
         self.score = score
@@ -131,11 +187,11 @@ class HealthRing(QWidget):
         p.setFont(f)
         p.drawText(rect.adjusted(0, -side * 0.08, 0, -side * 0.08), Qt.AlignCenter,
                    "–" if self.score is None else f"{self.score:.0f}")
-        f.setPixelSize(max(11, int(side * 0.09)))
-        f.setBold(False)
+        f.setPixelSize(max(11, int(side * 0.095)))
+        f.setBold(True)
         p.setFont(f)
         p.setPen(QColor(color))
-        p.drawText(rect.adjusted(0, side * 0.3, 0, 0), Qt.AlignHCenter | Qt.AlignVCenter, label)
+        p.drawText(rect.adjusted(0, side * 0.30, 0, 0), Qt.AlignHCenter | Qt.AlignVCenter, label)
         p.end()
 
 
@@ -165,10 +221,10 @@ class InsightList(QWidget):
             row = QFrame()
             row.setObjectName("insight")
             h = QHBoxLayout(row)
-            h.setContentsMargins(12, 10, 12, 10)
+            h.setContentsMargins(12, 9, 12, 9)
             icon = QLabel(insight_icon(text))
             icon.setObjectName("cardIcon")
-            icon.setFixedWidth(28)
+            icon.setFixedWidth(26)
             body = QLabel(text)
             body.setWordWrap(True)
             h.addWidget(icon, 0, Qt.AlignTop)
@@ -181,7 +237,7 @@ def _card(object_name: str = "card") -> tuple[QFrame, QVBoxLayout]:
     frame.setObjectName(object_name)
     lay = QVBoxLayout(frame)
     lay.setContentsMargins(16, 14, 16, 14)
-    lay.setSpacing(4)
+    lay.setSpacing(6)
     return frame, lay
 
 
@@ -231,8 +287,12 @@ class Dashboard(QWidget):
     open_preview = Signal()
 
     STATS: tuple[tuple[str, str, str], ...] = (
-        ("work", "⏱️", "Waktu kerja"), ("peak", "📈", "Stres puncak"), ("breaks", "☕", "Istirahat ≥ 5 menit"),
-        ("stretch", "⏳", "Kerja terlama tanpa jeda"), ("advice", "💬", "Saran diikuti"), ("yawn", "🥱", "Menguap"),
+        ("work", "⏱️", "Durasi kerja"),
+        ("peak", "📈", "Stres puncak"),
+        ("breaks", "☕", "Istirahat ≥ 5 mnt"),
+        ("stretch", "⏳", "Duduk terlama"),
+        ("advice", "💬", "Saran diikuti"),
+        ("yawn", "🥱", "Menguap"),
     )
 
     def __init__(self, repo: Repository, cfg: dict[str, Any]) -> None:
@@ -240,7 +300,7 @@ class Dashboard(QWidget):
         self.repo, self.cfg = repo, cfg
         self.setWindowTitle("Stress Buddy · Dashboard")
         self.setStyleSheet(theme.STYLESHEET)
-        self.resize(1080, 860)
+        self.resize(1060, 860)
         self.values: dict[str, QLabel] = {}
 
         outer = QVBoxLayout(self)
@@ -259,33 +319,33 @@ class Dashboard(QWidget):
         root.addLayout(self._build_hero())
 
         grid = QGridLayout()
-        grid.setSpacing(12)
+        grid.setSpacing(10)
         for i, (key, icon, label) in enumerate(self.STATS):
             frame, value = _stat_card(icon, label)
             self.values[key] = value
             grid.addWidget(frame, i // 3, i % 3)
         root.addLayout(grid)
 
-        card, self.fig_hourly, self.canvas_hourly = _chart_card("Stres per jam", 230)
+        card, self.fig_hourly, self.canvas_hourly = _chart_card("Tren Stres Hari Ini (Per Jam)", 215)
         root.addWidget(card)
         row = QHBoxLayout()
         row.setSpacing(12)
-        card, self.fig_breaks, self.canvas_breaks = _chart_card("Istirahat per hari (7 hari)", 210)
+        card, self.fig_breaks, self.canvas_breaks = _chart_card("Frekuensi Istirahat (7 Hari)", 195)
         row.addWidget(card, 1)
-        card, self.fig_trend, self.canvas_trend = _chart_card("Tren 7 hari", 210)
+        card, self.fig_trend, self.canvas_trend = _chart_card("Perbandingan Stres & Kesehatan (7 Hari)", 195)
         row.addWidget(card, 1)
         root.addLayout(row)
 
         card, lay = _card()
-        h = QLabel("Insight otomatis")
+        h = QLabel("Catatan Detail Hari Ini")
         h.setObjectName("h2")
         lay.addWidget(h)
-        lay.addSpacing(4)
+        lay.addSpacing(2)
         self.insights = InsightList()
         lay.addWidget(self.insights)
         root.addWidget(card)
 
-        note = QLabel("🔒 " + DISCLAIMER + " Hanya angka indikator yang disimpan, tanpa gambar atau video.")
+        note = QLabel("🔒 " + DISCLAIMER + " Semua kamera diproses lokal di perangkat, hanya angka indikator yang disimpan.")
         note.setObjectName("muted")
         note.setWordWrap(True)
         root.addWidget(note)
@@ -299,8 +359,8 @@ class Dashboard(QWidget):
     def _build_header(self) -> QHBoxLayout:
         head = QHBoxLayout()
         titles = QVBoxLayout()
-        titles.setSpacing(0)
-        title = QLabel("Ringkasan harian")
+        titles.setSpacing(1)
+        title = QLabel("Dashboard & Kesimpulan Harian")
         title.setObjectName("title")
         self.subtitle = QLabel("")
         self.subtitle.setObjectName("subtitle")
@@ -329,7 +389,7 @@ class Dashboard(QWidget):
         reload_.setObjectName("icon")
         reload_.setToolTip("Muat ulang")
         reload_.clicked.connect(self.refresh)
-        camera_btn = QPushButton("Pratinjau kamera")
+        camera_btn = QPushButton("📷 Kamera & Deteksi")
         camera_btn.setObjectName("secondary")
         camera_btn.clicked.connect(self.open_preview.emit)
         export = QPushButton("Ekspor CSV")
@@ -346,36 +406,52 @@ class Dashboard(QWidget):
         row.setSpacing(12)
         hero, lay = _card("hero")
         h = QHBoxLayout()
-        h.setSpacing(16)
+        h.setSpacing(18)
         self.cat = QLabel()
-        self.cat.setFixedSize(136, 136)
+        self.cat.setFixedSize(138, 138)
         h.addWidget(self.cat, 0, Qt.AlignVCenter)
+
         text = QVBoxLayout()
-        text.setSpacing(8)
+        text.setSpacing(6)
+
+        badge_line = QHBoxLayout()
+        badge_line.setSpacing(8)
+        kicker = QLabel("✨ KESIMPULAN HARI INI")
+        kicker.setStyleSheet(f"color: {theme.ACCENT}; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;")
+        badge_line.addWidget(kicker)
+        badge_line.addStretch(1)
+        cap = QLabel("Rata-rata stres:")
+        cap.setObjectName("cardLabel")
+        self.values["avg"] = QLabel("–")
+        self.values["avg"].setStyleSheet("font-size: 16px; font-weight: 800;")
+        self.level_pill = QLabel("")
+        self.level_pill.setObjectName("pill")
+        self.level_pill.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        badge_line.addWidget(cap)
+        badge_line.addWidget(self.values["avg"])
+        badge_line.addWidget(self.level_pill, 0, Qt.AlignVCenter)
+        text.addLayout(badge_line)
+
         self.hero_text = QLabel("")
         self.hero_text.setObjectName("heroText")
         self.hero_text.setWordWrap(True)
         text.addWidget(self.hero_text)
-        line = QHBoxLayout()
-        line.setSpacing(8)
-        cap = QLabel("Rata-rata stres")
-        cap.setObjectName("cardLabel")
-        self.values["avg"] = QLabel("–")
-        self.values["avg"].setObjectName("cardValue")
-        self.level_pill = QLabel("")
-        self.level_pill.setObjectName("pill")
-        self.level_pill.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        line.addWidget(cap)
-        line.addWidget(self.values["avg"])
-        line.addWidget(self.level_pill, 0, Qt.AlignVCenter)
-        line.addStretch(1)
-        text.addLayout(line)
+
+        self.conclusion_text = QLabel("")
+        self.conclusion_text.setObjectName("heroSub")
+        self.conclusion_text.setWordWrap(True)
+        text.addWidget(self.conclusion_text)
+
+        self.tips_layout = QHBoxLayout()
+        self.tips_layout.setSpacing(6)
+        text.addLayout(self.tips_layout)
+
         h.addLayout(text, 1)
         lay.addLayout(h)
         row.addWidget(hero, 3)
 
         ring_card, rl = _card()
-        cap = QLabel("Health score")
+        cap = QLabel("Skor Kesehatan")
         cap.setObjectName("h2")
         rl.addWidget(cap, 0, Qt.AlignHCenter)
         self.ring = HealthRing()
@@ -386,6 +462,20 @@ class Dashboard(QWidget):
         ring_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         row.addWidget(ring_card, 1)
         return row
+
+    def _set_tip_pills(self, tips: list[str]) -> None:
+        while self.tips_layout.count():
+            item = self.tips_layout.takeAt(0)
+            if item.widget() is not None:
+                item.widget().deleteLater()
+        for tip in tips:
+            pill = QLabel(tip)
+            pill.setStyleSheet(
+                f"background: {theme.CARD}; color: {theme.TEXT}; border: 1px solid #F2C7A5;"
+                " border-radius: 9px; padding: 4px 10px; font-size: 11px; font-weight: 600;"
+            )
+            self.tips_layout.addWidget(pill)
+        self.tips_layout.addStretch(1)
 
     # -- data -----------------------------------------------------------------------------
     def selected_day(self) -> date:
@@ -422,6 +512,10 @@ class Dashboard(QWidget):
             self.level_pill.setStyleSheet(f"background: {theme.LEVEL_SOFT[level]}; color: {theme.LEVEL_COLORS[level]};")
         sprite, sentence = buddy_message(t)
         self.hero_text.setText(sentence)
+        summary_body, tips = daily_conclusion(t, self.cfg)
+        self.conclusion_text.setText(summary_body)
+        self._set_tip_pills(tips)
+
         pix = QPixmap(str(CAT_DIR / f"{sprite}.png"))
         if not pix.isNull():
             self.cat.setPixmap(pix.scaled(self.cat.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -443,8 +537,8 @@ class Dashboard(QWidget):
         hourly = ds.hourly_stress(self.repo, day)
         if hourly:
             hours, scores = zip(*hourly, strict=True)
-            ax.fill_between(hours, scores, color=theme.ACCENT, alpha=0.12, lw=0)
-            ax.plot(hours, scores, color=theme.ACCENT, lw=2, marker="o", ms=4)
+            ax.fill_between(hours, scores, color=theme.ACCENT, alpha=0.14, lw=0)
+            ax.plot(hours, scores, color=theme.ACCENT, lw=2.2, marker="o", ms=4.5)
             ax.set_xticks(list(hours))
             ax.set_xticklabels([f"{h:02d}.00" for h in hours])
         else:
@@ -460,7 +554,7 @@ class Dashboard(QWidget):
         _style_axes(ax)
         counts = [d.break_count for d in self.history]
         colors = [theme.CHART_MUTED] * (len(counts) - 1) + [theme.LEVEL_COLORS["rendah"]]
-        bars = ax.bar(labels, counts, color=colors, width=0.6)
+        bars = ax.bar(labels, counts, color=colors, width=0.58)
         ax.bar_label(bars, fontsize=8, color=theme.TEXT_2, padding=2)
         ax.set_ylim(0, max(counts + [1]) * 1.25)
         ax.set_yticks([])
@@ -474,7 +568,7 @@ class Dashboard(QWidget):
         ax.plot(labels, [d.avg_stress if d.avg_stress is not None else nan for d in self.history],
                 marker="o", ms=4, lw=2, color=theme.ACCENT, label="rata-rata stres")
         ax.plot(labels, [d.health_score if d.health_score is not None else nan for d in self.history],
-                marker="s", ms=4, lw=2, color=theme.LEVEL_COLORS["rendah"], label="health score")
+                marker="s", ms=4, lw=2, color=theme.LEVEL_COLORS["rendah"], label="skor kesehatan")
         ax.set_ylim(0, 105)
         ax.legend(fontsize=8, frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2)
         self.canvas_trend.draw_idle()

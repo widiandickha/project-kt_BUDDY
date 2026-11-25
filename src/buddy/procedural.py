@@ -1,6 +1,7 @@
 """Procedural cat drawn with QPainter: fallback when the 12 PNG sprites are missing or invalid.
 
-Expression parameters mirror scripts/generate_placeholder_sprites.py (eyes, mouth, brow, body).
+Expression parameters mirror scripts/generate_cat_sprites.py (eyes, mouth, brow, body).
+Includes tabby stripes, red collar, and golden bell so fallback art looks just as polished.
 """
 
 from __future__ import annotations
@@ -8,10 +9,15 @@ from __future__ import annotations
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 
-ORANGE = QColor(253, 186, 100)
-ORANGE_DARK = QColor(250, 128, 100)
-OUTLINE = QColor(40, 50, 110)
-PINK = QColor(240, 110, 150)
+ORANGE = QColor("#F59E3F")
+ORANGE_DARK = QColor("#D87724")
+CREAM = QColor("#FFF7EA")
+STRIPE = QColor("#B8551E")
+OUTLINE = QColor("#4A250D")
+PINK = QColor("#F78697")
+COLLAR = QColor("#D9383A")
+BELL = QColor("#FACC15")
+IRIS = QColor("#5AB84B")
 
 EXPRESSION_PARAMS: dict[str, dict[str, str]] = {
     "idle": dict(eyes="open", mouth="smile", brow="none", body="sit"),
@@ -45,68 +51,108 @@ def draw_cat(p: QPainter, size: int, expression: str) -> None:
     spec = EXPRESSION_PARAMS.get(expression, EXPRESSION_PARAMS["idle"])
     s = float(size)
     body, hc, r = _layout(spec["body"], s)
-    w = max(2.0, s / 110.0)
+    w = max(2.0, s / 100.0)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setPen(Qt.PenStyle.NoPen)
 
-    p.setPen(QPen(ORANGE, s * 0.06, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))  # tail
+    # Tail
+    p.setPen(QPen(ORANGE, s * 0.065, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
     p.drawArc(QRectF(body.right() - s * .12, body.bottom() - s * .42, s * .32, s * .32), 270 * 16, 190 * 16)
-    p.setPen(Qt.PenStyle.NoPen)
+
+    # Body & chest
+    pen = QPen(OUTLINE, w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+    p.setPen(pen)
     p.setBrush(ORANGE)
     p.drawEllipse(body)
-    for sx in (-1, 1):  # ears
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(CREAM)
+    p.drawEllipse(QRectF(body.center().x() - body.width() * 0.24, body.top() + body.height() * 0.12,
+                         body.width() * 0.48, body.height() * 0.50))
+
+    # Red collar & golden bell
+    p.setBrush(COLLAR)
+    p.drawRoundedRect(QRectF(hc.x() - r * 0.62, hc.y() + r * 0.68, r * 1.24, r * 0.22), r * 0.1, r * 0.1)
+    p.setPen(QPen(OUTLINE, w * 0.6))
+    p.setBrush(BELL)
+    p.drawEllipse(QPointF(hc.x(), hc.y() + r * 0.85), r * 0.16, r * 0.16)
+
+    # Ears
+    for sx in (-1, 1):
         ex = hc.x() + sx * r * .62
+        p.setPen(pen)
         p.setBrush(ORANGE)
-        p.drawPolygon(QPolygonF([QPointF(ex - sx * r * .35, hc.y() - r * .55), QPointF(ex + sx * r * .05, hc.y() - r * 1.25),
+        p.drawPolygon(QPolygonF([QPointF(ex - sx * r * .35, hc.y() - r * .55), QPointF(ex + sx * r * .05, hc.y() - r * 1.28),
                                  QPointF(ex + sx * r * .45, hc.y() - r * .55)]))
-        p.setBrush(ORANGE_DARK)
-        p.drawPolygon(QPolygonF([QPointF(ex - sx * r * .15, hc.y() - r * .62), QPointF(ex + sx * r * .05, hc.y() - r * 1.0),
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(PINK)
+        p.drawPolygon(QPolygonF([QPointF(ex - sx * r * .15, hc.y() - r * .62), QPointF(ex + sx * r * .05, hc.y() - r * 1.02),
                                  QPointF(ex + sx * r * .28, hc.y() - r * .62)]))
+
+    # Head
+    p.setPen(pen)
     p.setBrush(ORANGE)
     p.drawEllipse(QRectF(hc.x() - r, hc.y() - r * .9, 2 * r, 1.8 * r))
-    p.setBrush(ORANGE_DARK)
-    for sx in (-1, 1):  # cheeks
-        p.drawEllipse(QRectF(hc.x() + sx * r * .72 - r * .16, hc.y() + r * .08, r * .32, r * .24))
 
-    pen = QPen(OUTLINE, w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
-    for sx in (-1, 1):  # eyes
-        x, y, er = hc.x() + sx * r * .45, hc.y() - r * .02, r * .13
+    # Forehead tabby stripes
+    p.setPen(QPen(STRIPE, w * 1.1, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+    for dx in (-r * 0.22, 0.0, r * 0.22):
+        p.drawLine(QPointF(hc.x() + dx, hc.y() - r * 0.80), QPointF(hc.x() + dx * 0.7, hc.y() - r * 0.52))
+
+    # Blush cheeks
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(255, 110, 125, 110))
+    for sx in (-1, 1):
+        p.drawEllipse(QRectF(hc.x() + sx * r * .68 - r * .18, hc.y() + r * .08, r * .36, r * .22))
+
+    # Eyes
+    for sx in (-1, 1):
+        x, y, er = hc.x() + sx * r * .44, hc.y() - r * .04, r * .17
         style = spec["eyes"]
         if style in ("open", "half"):
+            p.setPen(QPen(OUTLINE, w * 0.7))
+            p.setBrush(IRIS)
+            p.drawEllipse(QPointF(x, y), er, er * 1.1)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(OUTLINE)
-            p.drawEllipse(QPointF(x, y), er, er)
+            p.drawEllipse(QPointF(x, y), er * 0.55, er * 0.85)
+            p.setBrush(Qt.GlobalColor.white)
+            p.drawEllipse(QPointF(x - er * 0.28, y - er * 0.32), er * 0.32, er * 0.32)
             if style == "half":
-                p.setBrush(ORANGE)
+                p.setBrush(ORANGE_DARK)
                 p.drawRect(QRectF(x - er * 1.2, y - er * 1.2, er * 2.4, er * 1.1))
                 p.setPen(pen)
                 p.drawLine(QPointF(x - er * 1.2, y - er * .1), QPointF(x + er * 1.2, y - er * .1))
         elif style == "wide":
             p.setPen(pen)
-            p.setBrush(Qt.GlobalColor.white)
-            p.drawEllipse(QPointF(x, y), er * 1.5, er * 1.5)
+            p.setBrush(IRIS)
+            p.drawEllipse(QPointF(x, y), er * 1.35, er * 1.35)
             p.setBrush(OUTLINE)
             p.drawEllipse(QPointF(x, y), er * .75, er * .75)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(Qt.GlobalColor.white)
+            p.drawEllipse(QPointF(x - er * 0.35, y - er * 0.35), er * 0.38, er * 0.38)
         else:  # closed / happy arcs
             p.setPen(pen)
             p.setBrush(Qt.BrushStyle.NoBrush)
-            arc = QRectF(x - er * 1.4, y - er, er * 2.8, er * 2.4)
+            arc = QRectF(x - er * 1.2, y - er * 0.8, er * 2.4, er * 2.0)
             p.drawArc(arc, (200 if style == "closed" else 20) * 16, 140 * 16)
+
     if spec["brow"] == "worried":
         p.setPen(pen)
         for sx in (-1, 1):
-            x, y = hc.x() + sx * r * .45, hc.y() - r * .30
+            x, y = hc.x() + sx * r * .45, hc.y() - r * .32
             p.drawLine(QPointF(x - sx * r * .18, y - r * .10), QPointF(x + sx * r * .18, y + r * .06))
+
     mx, my = hc.x(), hc.y() + r * .40
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(OUTLINE)
-    p.drawEllipse(QRectF(mx - r * .05, my - r * .22, r * .1, r * .08))  # nose
+    p.setBrush(PINK)
+    p.drawEllipse(QRectF(mx - r * .07, my - r * .24, r * .14, r * .10))  # nose
     mouth = spec["mouth"]
     if mouth in ("open", "yawn"):
-        k = 1.4 if mouth == "yawn" else 1.0
+        k = 1.35 if mouth == "yawn" else 1.0
+        p.setBrush(OUTLINE)
         p.drawEllipse(QRectF(mx - r * .14 * k, my - r * .02, r * .28 * k, r * .30 * k))
         p.setBrush(PINK)
-        p.drawEllipse(QRectF(mx - r * .08 * k, my + r * .12 * k, r * .16 * k, r * .14 * k))
+        p.drawEllipse(QRectF(mx - r * .09 * k, my + r * .10 * k, r * .18 * k, r * .15 * k))
     elif mouth == "smile":
         p.setPen(pen)
         p.setBrush(Qt.BrushStyle.NoBrush)

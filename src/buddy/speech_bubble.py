@@ -11,14 +11,21 @@ from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, QRec
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from src.ui import theme
+
 ANIM_MS = 200
-WIDTH = 270
+WIDTH = 284
 TAIL = 10
-RADIUS = 12
-BG = QColor(255, 253, 248)
-BORDER = QColor(40, 50, 110)
+RADIUS = 14
+BG = QColor("#FFFDF9")
+BORDER = QColor("#E2C5AE")
+SHADOW = QColor(28, 25, 23, 28)
 TEXT = "#1C1917"
-BUTTONS: tuple[tuple[str, str], ...] = (("Oke", "oke"), ("Nanti", "nanti"), ("Jangan hari ini", "jangan_hari_ini"))
+BUTTONS: tuple[tuple[str, str, bool], ...] = (
+    ("✓ Oke", "oke", True),
+    ("Nanti", "nanti", False),
+    ("Jangan hari ini", "jangan_hari_ini", False),
+)
 
 
 class SpeechBubble(QWidget):
@@ -36,23 +43,33 @@ class SpeechBubble(QWidget):
         self.key = ""
         self._label = QLabel()
         self._label.setWordWrap(True)
-        self._label.setStyleSheet(f"color: {TEXT}; font-size: 13px;")
+        self._label.setStyleSheet(f"color: {TEXT}; font-size: 13px; font-weight: 600;")
         self._buttons = QHBoxLayout()
         self._buttons.setSpacing(6)
         self._button_widgets: list[QPushButton] = []
-        for text, response in BUTTONS:
+        for text, response, is_primary in BUTTONS:
             b = QPushButton(text)
             b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
-            b.setStyleSheet("QPushButton { background: #F0ECE1; border: 1px solid #78716C; border-radius: 6px;"
-                            " padding: 2px 8px; color: #1C1917; font-size: 11px; }"
-                            " QPushButton:hover { background: #E7E1D3; }")
+            if is_primary:
+                b.setStyleSheet(
+                    f"QPushButton {{ background: {theme.ACCENT}; border: none; border-radius: 7px;"
+                    " padding: 4px 11px; color: white; font-size: 11px; font-weight: 700; }"
+                    f" QPushButton:hover {{ background: {theme.ACCENT_HOVER}; }}"
+                )
+            else:
+                b.setStyleSheet(
+                    f"QPushButton {{ background: {theme.SURFACE}; border: 1px solid {theme.BORDER}; border-radius: 7px;"
+                    f" padding: 4px 9px; color: {theme.TEXT_2}; font-size: 11px; font-weight: 600; }}"
+                    f" QPushButton:hover {{ background: {theme.ACCENT_SOFT}; color: {theme.ACCENT_HOVER}; }}"
+                )
             b.clicked.connect(lambda _=False, r=response: self._finish(r))
             self._buttons.addWidget(b)
             self._button_widgets.append(b)
         self._buttons.addStretch(1)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(14, 10, 14, 10 + TAIL)
+        lay.setContentsMargins(16, 12, 16, 12 + TAIL)
+        lay.setSpacing(8)
         lay.addWidget(self._label)
         lay.addLayout(self._buttons)
         self.setFixedWidth(WIDTH)
@@ -112,19 +129,28 @@ class SpeechBubble(QWidget):
         self._finish("ditutup")
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt API)
-        """Rounded bubble with a tail pointing at the cat."""
+        """Rounded bubble with a subtle drop shadow and tail pointing at the cat."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        body = QRectF(1, 1, self.width() - 2, self.height() - TAIL - 2)
+        body = QRectF(2, 2, self.width() - 4, self.height() - TAIL - 4)
         path = QPainterPath()
         path.addRoundedRect(body, RADIUS, RADIUS)
         tx = min(max(getattr(self, "_tail_x", self.width() / 2), RADIUS + TAIL), self.width() - RADIUS - TAIL)
         tail = QPainterPath()
         tail.moveTo(tx - TAIL, body.bottom() - 1)
-        tail.lineTo(tx, self.height() - 1)
+        tail.lineTo(tx, self.height() - 2)
         tail.lineTo(tx + TAIL, body.bottom() - 1)
         tail.closeSubpath()
         path = path.united(tail)
-        p.setPen(QPen(BORDER, 1.5))
+
+        # Soft shadow
+        p.save()
+        p.translate(0, 1.5)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(SHADOW)
+        p.drawPath(path)
+        p.restore()
+
+        p.setPen(QPen(BORDER, 1.6))
         p.setBrush(BG)
         p.drawPath(path)

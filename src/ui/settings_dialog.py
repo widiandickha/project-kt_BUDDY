@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -36,49 +37,73 @@ class SettingsDialog(QDialog):
         self.cfg = cfg
         self.setWindowTitle("Pengaturan Stress Buddy")
         self.setStyleSheet(theme.STYLESHEET)
+        self.setMinimumWidth(460)
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.setSpacing(12)
+
+        title = QLabel("⚙️  Pengaturan")
+        title.setObjectName("title")
+        lay.addWidget(title)
+
+        card = QFrame()
+        card.setObjectName("card")
+        card_lay = QVBoxLayout(card)
+        card_lay.setContentsMargins(16, 14, 16, 14)
         form = QFormLayout()
+        form.setVerticalSpacing(10)
+        form.setHorizontalSpacing(16)
         b = cfg["buddy"]
+
         self.scale = QDoubleSpinBox()
         self.scale.setRange(0.8, 1.2)  # 128..192 px with base 160
         self.scale.setSingleStep(0.05)
         self.scale.setValue(float(b["scale"]))
         form.addRow("Ukuran kucing", self.scale)
+
         self.position = QComboBox()
         self.position.addItems(["right", "center"])
         self.position.setCurrentText(str(b.get("position", "right")))
-        form.addRow("Posisi (kanan / tengah bawah)", self.position)
+        form.addRow("Posisi di layar", self.position)
+
         self.monitor = QComboBox()
         for i, s in enumerate(QGuiApplication.screens()):
             self.monitor.addItem(f"{i}: {s.name()}", i)
         self.monitor.setCurrentIndex(min(int(b.get("monitor", 0)), max(0, self.monitor.count() - 1)))
         form.addRow("Monitor", self.monitor)
-        self.overlays = QCheckBox("Efek animasi (zZz, keringat, konfeti)")
-        self.overlays.setChecked(bool(b["overlays_enabled"]))
-        form.addRow("", self.overlays)
-        self.perf = QCheckBox("Mode hemat (pose tiap 3 frame, deteksi tiap 2 frame)")
-        self.perf.setChecked(bool(cfg["inference"]["performance_mode"]))
-        form.addRow("", self.perf)
+
         self.work_break = QSpinBox()
         self.work_break.setRange(20, 120)
         self.work_break.setValue(int(cfg["habit"]["work_break_min"]))
         self.work_break.setSuffix(" menit")
-        form.addRow("Ingatkan istirahat setelah", self.work_break)
+        form.addRow("Ingatkan istirahat tiap", self.work_break)
+
         self.retention = QSpinBox()
         self.retention.setRange(7, 365)
         self.retention.setValue(int(cfg["storage"]["retention_days"]))
         self.retention.setSuffix(" hari")
-        form.addRow("Simpan riwayat selama", self.retention)
-        lay.addLayout(form)
+        form.addRow("Simpan riwayat", self.retention)
+
+        self.overlays = QCheckBox("Efek animasi kucing (zZz, keringat, konfeti)")
+        self.overlays.setChecked(bool(b["overlays_enabled"]))
+        form.addRow("", self.overlays)
+
+        self.perf = QCheckBox("Mode hemat baterai/CPU")
+        self.perf.setChecked(bool(cfg["inference"]["performance_mode"]))
+        form.addRow("", self.perf)
+
+        card_lay.addLayout(form)
+        lay.addWidget(card)
+
         note = QLabel("Ukuran, posisi, dan monitor berlaku setelah aplikasi dibuka ulang.")
         note.setObjectName("muted")
         lay.addWidget(note)
 
         row = QHBoxLayout()
-        recal = QPushButton("Kalibrasi ulang")
+        recal = QPushButton("🎯 Kalibrasi Ulang")
         recal.setObjectName("secondary")
         recal.clicked.connect(self._recalibrate)
-        delete = QPushButton("Hapus semua data")
+        delete = QPushButton("🗑️ Hapus Data")
         delete.setObjectName("secondary")
         delete.clicked.connect(self._confirm_delete)
         save = QPushButton("Simpan")

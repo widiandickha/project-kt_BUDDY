@@ -7,16 +7,16 @@ import time
 from typing import Any
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout
 
 from src.analysis.calibration import Calibration, CalibrationSession
 from src.core.events import FrameFeatures
 from src.ui import theme
 
 INSTRUCTIONS = {
-    "open": "Duduk tegak seperti biasa bekerja dan lihat ke layar dengan mata terbuka normal.",
-    "closed": "Sekarang pejamkan mata sebentar sampai bar penuh.",
-    "done": "Selesai!",
+    "open": "👀  Duduk tegak seperti biasa bekerja dan lihat ke layar dengan mata terbuka.",
+    "closed": "😌  Sekarang pejamkan mata sebentar sampai bar penuh.",
+    "done": "✅  Kalibrasi selesai!",
 }
 UI_TICK_MS = 100
 
@@ -33,33 +33,52 @@ class CalibrationWizard(QDialog):
         self.setStyleSheet(theme.STYLESHEET)
         self.setMinimumWidth(460)
         lay = QVBoxLayout(self)
-        title = QLabel("Kalibrasi singkat")
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.setSpacing(12)
+
+        title = QLabel("🎯  Kalibrasi Singkat")
         title.setObjectName("title")
         lay.addWidget(title)
-        intro = QLabel("Supaya ambang mata tertutup, postur, dan jarak sesuai dirimu. Butuh sekitar "
-                       f"{int(cfg['calibration']['total_sec'])} detik. Tidak ada gambar yang disimpan.")
+
+        intro = QLabel(
+            f"Hanya butuh {int(cfg['calibration']['total_sec'])} detik agar deteksi mata, postur, dan jarak layar "
+            "sesuai denganmu. Tidak ada foto atau video yang disimpan."
+        )
         intro.setWordWrap(True)
         intro.setObjectName("muted")
         lay.addWidget(intro)
-        self.instruction = QLabel("Tekan Mulai bila sudah siap.")
+
+        card = QFrame()
+        card.setObjectName("hero")
+        card_lay = QVBoxLayout(card)
+        card_lay.setContentsMargins(16, 14, 16, 14)
+        card_lay.setSpacing(10)
+        self.instruction = QLabel("Klik Mulai saat kamu sudah duduk nyaman di depan layar.")
+        self.instruction.setObjectName("heroText")
         self.instruction.setWordWrap(True)
-        lay.addWidget(self.instruction)
+        card_lay.addWidget(self.instruction)
+
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
-        lay.addWidget(self.progress)
-        self.face_label = QLabel("")
+        self.progress.setFixedHeight(14)
+        card_lay.addWidget(self.progress)
+
+        self.face_label = QLabel("Menunggu dimulai...")
         self.face_label.setObjectName("muted")
-        lay.addWidget(self.face_label)
+        card_lay.addWidget(self.face_label)
+        lay.addWidget(card)
+
         row = QHBoxLayout()
-        self.skip_btn = QPushButton("Lewati (pakai nilai bawaan)")
+        self.skip_btn = QPushButton("Lewati")
         self.skip_btn.setObjectName("secondary")
         self.skip_btn.clicked.connect(self._skip)
-        self.start_btn = QPushButton("Mulai")
+        self.start_btn = QPushButton("Mulai Kalibrasi")
         self.start_btn.clicked.connect(self.start)
         row.addWidget(self.skip_btn)
         row.addStretch(1)
         row.addWidget(self.start_btn)
         lay.addLayout(row)
+
         self.session: CalibrationSession | None = None
         self._faces = 0
         self._timer = QTimer(self)
@@ -91,7 +110,7 @@ class CalibrationWizard(QDialog):
             result = self.session.result()
             self.session = None
             if result is None:
-                self.instruction.setText("Wajah kurang terbaca atau mata tidak terpejam. Coba lagi dengan cahaya cukup.")
+                self.instruction.setText("⚠️ Wajah kurang terbaca atau mata belum terpejam. Coba lagi dengan cahaya cukup.")
                 self.start_btn.setText("Coba lagi")
                 self.start_btn.setEnabled(True)
                 return

@@ -3,8 +3,8 @@
 Frameless, always on top, Qt.Tool (no taskbar entry), never takes focus, translucent.
 Sits at the bottom edge of QScreen.availableGeometry() (above the taskbar) on the configured
 monitor, right or center. Clicks on transparent pixels pass through (setMask from the sprite
-alpha, refreshed <= buddy.mask_hz). Left click = react, right click = menu, drag = move along
-the bottom edge.
+alpha, refreshed <= buddy.mask_hz). Left click = react, right click = styled menu, drag = move
+along the bottom edge.
 """
 
 from __future__ import annotations
@@ -16,15 +16,16 @@ from PySide6.QtGui import QBitmap, QGuiApplication, QPainter, QRegion
 from PySide6.QtWidgets import QMenu, QWidget
 
 from src.buddy.sprite_player import SpriteAnimator
+from src.ui import theme
 
 DRAG_THRESHOLD_PX = 4
 MENU_ACTIONS: tuple[tuple[str, str], ...] = (
-    ("pause", "Jeda 30 menit"),
-    ("silence_today", "Diam hari ini"),
-    ("dashboard", "Buka dashboard"),
-    ("preview", "Pratinjau kamera"),
-    ("settings", "Pengaturan"),
-    ("quit", "Keluar"),
+    ("dashboard", "📊  Buka Dashboard"),
+    ("preview", "📷  Lihat Kamera & Deteksi"),
+    ("pause", "⏸️  Jeda 30 Menit"),
+    ("silence_today", "🔕  Diam Hari Ini"),
+    ("settings", "⚙️  Pengaturan"),
+    ("quit", "🚪  Keluar"),
 )
 
 
@@ -125,9 +126,15 @@ class BuddyWindow(QWidget):
         self._press, self._dragging = None, False
 
     def contextMenuEvent(self, event) -> None:  # noqa: N802 (Qt API)
-        """Right-click menu."""
+        """Modern styled right-click menu with section separators."""
         menu = QMenu(self)
+        menu.setStyleSheet(theme.MENU_STYLESHEET)
+        header = menu.addAction("🐾  Stress Buddy")
+        header.setEnabled(False)
+        menu.addSeparator()
         for key, label in MENU_ACTIONS:
+            if key in ("pause", "settings", "quit"):
+                menu.addSeparator()
             act = menu.addAction(label)
             act.triggered.connect(lambda _=False, k=key: self.menu_action.emit(k))
         menu.exec(event.globalPos())
