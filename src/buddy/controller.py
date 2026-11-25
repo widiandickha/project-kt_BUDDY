@@ -30,8 +30,8 @@ class BuddyController(QObject):
     advice_response = Signal(str, str)     # key, response
     state_changed = Signal(str, str)       # previous, current
     pause_requested = Signal(int)          # minutes
-    open_camera = Signal()
     open_dashboard = Signal()
+    open_preview = Signal()
     open_settings = Signal()
     quit_requested = Signal()
     fullscreen_changed = Signal(bool)
@@ -115,15 +115,15 @@ class BuddyController(QObject):
 
     def on_menu(self, key: str) -> None:
         """Right-click menu actions."""
-        if key == "camera":
-            self.open_camera.emit()
-        elif key == "pause":
+        if key == "pause":
             self.advice.mute_until(time.time() + self.pause_min * SEC_PER_MIN)
             self.pause_requested.emit(self.pause_min)
         elif key == "silence_today":
             self.silence_today()
         elif key == "dashboard":
             self.open_dashboard.emit()
+        elif key == "preview":
+            self.open_preview.emit()
         elif key == "settings":
             self.open_settings.emit()
         elif key == "quit":

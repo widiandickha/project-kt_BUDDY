@@ -39,6 +39,7 @@ Peta dari setiap bab laporan ke file atau hasil di repo ini. Gambar dibuat ulang
 - Semua pemrosesan dilakukan di perangkat. Tidak ada panggilan jaringan saat aplikasi berjalan (unduhan hanya untuk bobot model resmi saat pertama kali).
 - Frame video tidak pernah ditulis ke disk oleh aplikasi; `privacy.save_frames` dikunci `false` oleh validasi config. Database hanya berisi angka dan event.
 - Kamera bisa dijeda kapan saja (perangkat benar-benar dilepas), dan ikon tray menunjukkan saat kamera aktif.
+- Pratinjau kamera hanya menampilkan gambar di memori selama jendelanya terbuka. Tidak ada fitur menyimpan atau merekam (D-032).
 - Tombol "Hapus semua data" tersedia, dan retensi default 90 hari.
 - Pengumpulan data dan sesi uji memakai persetujuan tertulis (`collect_data.py` dan `scenario_session.py` memintanya). Peserta dicatat dengan kode, bukan nama.
 - Video demo tidak menampilkan wajah orang tanpa izin.
@@ -47,7 +48,7 @@ Peta dari setiap bab laporan ke file atau hasil di repo ini. Gambar dibuat ulang
 
 | Menit | Langkah | Yang ditunjukkan |
 |---|---|---|
-| 0:00–1:00 | `python -m src.main` → disclaimer → wizard kalibrasi (duduk tegak, lalu pejam) | Privasi, kalibrasi personal, ikon tray dengan titik merah |
+| 0:00–1:00 | `python -m src.main --preview` → disclaimer → wizard kalibrasi (duduk tegak, lalu pejam) | Privasi, kalibrasi personal, ikon tray dengan titik merah; jendela pratinjau menampilkan kotak deteksi dan label "LIVE · tidak disimpan" |
 | 1:00–2:30 | Pejam mata 3 detik beberapa kali, menguap 2–3 kali, tangan ke dahi | Kucing berubah WORRIED/SLEEPY lalu ALERT; skor naik (bisa ditunjukkan juga lewat `python -m src.buddy.demo` bila waktu sempit) |
 | 2:30–3:15 | Tunggu bubble saran, klik **Oke** / **Nanti** | Gelembung saran, cooldown, respons tercatat |
 | 3:15–4:15 | Tinggalkan kursi (atau tutup kamera) > 2 menit; percepat dengan `buddy.away_sleep_sec` kecil di `data/settings.yaml` | Kucing tidur (zZz), lalu WAKE_GREET saat kembali |

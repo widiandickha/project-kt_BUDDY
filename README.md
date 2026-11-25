@@ -59,10 +59,11 @@ Alur pemakaian:
 2. Kucing duduk di bawah layar (di atas taskbar/dock). Ikon **tray** menunjukkan status kamera (titik merah = kamera aktif).
 3. Interaksi dengan kucing:
    - **Klik kiri** → kucing bereaksi.
-   - **Klik kanan** → menu: Jeda 30 menit, Diam hari ini, Dashboard, Pengaturan, Keluar.
+   - **Klik kanan** → menu: Jeda 30 menit, Diam hari ini, Dashboard, **Pratinjau kamera**, Pengaturan, Keluar.
    - **Seret** → memindahkan kucing di sepanjang tepi bawah layar.
 4. Bubble saran punya tombol **Oke**, **Nanti** (tunda 10 menit), dan **Jangan hari ini**.
 5. Saat ada aplikasi lain yang fullscreen, kucing bersembunyi dan saran ditahan.
+6. **Pratinjau kamera** (klik kanan kucing atau menu tray) menampilkan wajahmu beserta kotak YOLO, landmark, titik pose, dan status setiap indikator (mata, menguap, kerutan, postur, jarak, skor). Gambar hanya ada di memori selama jendela terbuka dan tidak pernah disimpan.
 
 | Opsi | Fungsi |
 |---|---|
@@ -70,6 +71,7 @@ Alur pemakaian:
 | `--source-fps 15` | kecepatan putar untuk file atau folder |
 | `--record-features rek.jsonl` | rekam fitur angka (tanpa gambar) untuk replay dan uji event |
 | `--seconds 60 --skip-intro` | uji otomatis tanpa dialog |
+| `--preview` | buka pratinjau kamera saat mulai (wajahmu + kotak deteksi + indikator) |
 
 Pengaturan pengguna disimpan di `data/settings.yaml`. Hapus file itu untuk kembali ke `config.yaml`.
 

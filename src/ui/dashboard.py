@@ -228,7 +228,7 @@ def _style_axes(ax) -> None:
 class Dashboard(QWidget):
     """Reads from the repository; call refresh() to recompute."""
 
-    open_camera = Signal()
+    open_preview = Signal()
 
     STATS: tuple[tuple[str, str, str], ...] = (
         ("work", "⏱️", "Waktu kerja"), ("peak", "📈", "Stres puncak"), ("breaks", "☕", "Istirahat ≥ 5 menit"),
@@ -329,9 +329,9 @@ class Dashboard(QWidget):
         reload_.setObjectName("icon")
         reload_.setToolTip("Muat ulang")
         reload_.clicked.connect(self.refresh)
-        camera_btn = QPushButton("Lihat Kamera & Deteksi")
+        camera_btn = QPushButton("Pratinjau kamera")
         camera_btn.setObjectName("secondary")
-        camera_btn.clicked.connect(self.open_camera.emit)
+        camera_btn.clicked.connect(self.open_preview.emit)
         export = QPushButton("Ekspor CSV")
         export.clicked.connect(self.export_csv)
         for w in (prev, self.date_edit, nxt, today, reload_):

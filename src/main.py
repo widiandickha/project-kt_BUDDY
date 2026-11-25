@@ -67,7 +67,6 @@ class Bridge(QObject):
     """Moves callbacks from worker threads into the Qt main thread (queued signals)."""
 
     features = Signal(object)
-    detection_frame = Signal(object)
     camera_status = Signal(str, str)
 
 
@@ -99,7 +98,7 @@ class App(QObject):
 
         self.tray = Tray(bool(cfg["privacy"]["show_camera_indicator"]))
         self.dashboard = None
-        self.camera_view = None
+        self.preview = None
         self.wizard = None
         self._advice_ts: dict[str, float] = {}
         self._camera_lost = False
@@ -108,19 +107,18 @@ class App(QObject):
 
         self.bridge.camera_status.connect(self.on_camera_status)
         self.bridge.features.connect(self._on_features_main)
-        self.bridge.detection_frame.connect(self._on_detection_frame_main)
         b = self.buddy
         b.advice_shown.connect(self.on_advice_shown)
         b.advice_response.connect(self.on_advice_response)
         b.pause_requested.connect(self.pause_for)
         b.fullscreen_changed.connect(self.on_fullscreen)
-        b.open_camera.connect(self.show_camera_view)
         b.open_dashboard.connect(self.show_dashboard)
+        b.open_preview.connect(self.show_preview)
         b.open_settings.connect(self.show_settings)
         b.quit_requested.connect(self.quit)
         self.tray.toggle_pause.connect(self.toggle_pause)
-        self.tray.open_camera.connect(self.show_camera_view)
         self.tray.open_dashboard.connect(self.show_dashboard)
+        self.tray.open_preview.connect(self.show_preview)
         self.tray.open_settings.connect(self.show_settings)
         self.tray.recalibrate.connect(self.show_calibration)
         self.tray.quit_requested.connect(self.quit)
@@ -145,10 +143,10 @@ class App(QObject):
         self.buddy.show()
         self.tick_timer.start(TICK_MS)
         self.midnight_timer.start(MIDNIGHT_CHECK_MS)
-        if getattr(self.args, "show_camera", False):
-            self.show_camera_view()
         if self.needs_calibration and not self.args.skip_intro:
             QTimer.singleShot(1500, self.show_calibration)
+        if getattr(self.args, "preview", False):
+            QTimer.singleShot(300, self.show_preview)
         if self.args.seconds:
             QTimer.singleShot(int(self.args.seconds * 1000), self.quit)
         # Models load inside the inference thread, so YOLO availability is logged there (default_models).
@@ -158,8 +156,6 @@ class App(QObject):
     def tick(self) -> None:
         """Once per second: analysis, logging, Buddy reactions."""
         out = self.pipeline.tick()
-        if self.camera_view is not None and self.camera_view.isVisible():
-            self.camera_view.on_tick_result(out.result)
         for ev in out.buddy_events:
             self.buddy.handle_event(ev)
 
@@ -195,8 +191,6 @@ class App(QObject):
         """Release the camera; resume automatically after `minutes` (0 = until resumed)."""
         self.pipeline.pause()
         self.tray.set_camera_state("paused")
-        if self.camera_view is not None:
-            self.camera_view.update_pause_state(True)
         if minutes > 0:
             self.resume_timer.start(minutes * 60_000)
 
@@ -205,8 +199,6 @@ class App(QObject):
         self.resume_timer.stop()
         self.buddy.advice.unmute()
         self.pipeline.resume()
-        if self.camera_view is not None:
-            self.camera_view.update_pause_state(False)
 
     def on_fullscreen(self, active: bool) -> None:
         """Another app is fullscreen: stop inference to save CPU."""
@@ -226,38 +218,30 @@ class App(QObject):
             self.repo.set_advice_response(ts, key, response)
 
     # -- windows -------------------------------------------------------------------------------
-    def show_camera_view(self) -> None:
-        """Open (or bring to front) the live camera and detection process viewer."""
-        from src.ui.camera_view import CameraView
-
-        if self.camera_view is None:
-            self.camera_view = CameraView(self.pipeline, self.cfg)
-            self.camera_view.toggle_pause_requested.connect(self.toggle_pause)
-            self.camera_view.recalibrate_requested.connect(lambda: QTimer.singleShot(0, self.show_calibration))
-            self.camera_view.closed.connect(self._on_camera_view_closed)
-        self.camera_view.update_pause_state(self.pipeline.paused)
-        self.pipeline.frame_listener = self.bridge.detection_frame.emit
-        self.camera_view.show()
-        self.camera_view.raise_()
-
-    def _on_camera_view_closed(self) -> None:
-        self.pipeline.frame_listener = None
-
-    def _on_detection_frame_main(self, df: Any) -> None:
-        if self.camera_view is not None and self.camera_view.isVisible():
-            self.camera_view.on_detection_frame(df)
-
     def show_dashboard(self) -> None:
         """Open (or refresh) the dashboard."""
         from src.ui.dashboard import Dashboard
 
         if self.dashboard is None:
             self.dashboard = Dashboard(self.repo, self.cfg)
-            self.dashboard.open_camera.connect(self.show_camera_view)
+            self.dashboard.open_preview.connect(self.show_preview)
         else:
             self.dashboard.refresh()
         self.dashboard.show()
         self.dashboard.raise_()
+
+    def show_preview(self) -> None:
+        """Open the live camera preview (frames stay in memory, D-032)."""
+        from src.ui.preview_window import PreviewWindow
+
+        if self.preview is None:
+            eng = self.pipeline.engine
+            self.preview = PreviewWindow(self.cfg, lambda: eng.calibration, lambda: eng.last_snapshot,
+                                         lambda: self.pipeline.camera_active)
+            self.preview.closed.connect(lambda: self.pipeline.set_preview_listener(None))
+        self.pipeline.set_preview_listener(self.preview.push)
+        self.preview.show()
+        self.preview.raise_()
 
     def show_settings(self) -> None:
         """Open the settings dialog."""
@@ -322,6 +306,7 @@ class App(QObject):
         self._quitting = True
         self.tick_timer.stop()
         self.midnight_timer.stop()
+        self.pipeline.set_preview_listener(None)
         self.pipeline.stop()
         self.repo.flush()
         try:
@@ -331,8 +316,8 @@ class App(QObject):
         except Exception:  # noqa: BLE001 - never block exit on a summary error
             logger.exception("Ringkasan harian gagal dibuat")
         self.writer.stop()
-        if self.camera_view is not None:
-            self.camera_view.close()
+        if self.preview is not None:
+            self.preview.close()
         if self.dashboard is not None:
             self.dashboard.close()
         self.buddy.close()
@@ -350,7 +335,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--db", default=None, help="path database alternatif")
     ap.add_argument("--seconds", type=float, default=None, help="keluar otomatis setelah N detik")
     ap.add_argument("--skip-intro", action="store_true", help="tanpa dialog disclaimer & wizard kalibrasi")
-    ap.add_argument("--show-camera", action="store_true", help="langsung buka jendela pratinjau kamera & proses deteksi")
+    ap.add_argument("--preview", action="store_true", help="buka pratinjau kamera saat mulai")
     return ap.parse_args(argv)
 
 
