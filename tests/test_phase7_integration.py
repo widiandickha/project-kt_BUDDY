@@ -207,3 +207,45 @@ def test_app_starts_ticks_and_shuts_down_cleanly(qapp, tmp_path: Path, frames_di
     assert repo.get_state(DISCLAIMER_KEY) == "1"
     assert db.query("SELECT COUNT(*) AS n FROM daily_summary")[0]["n"] == 1
     assert not app.pipeline.capture.is_alive() and not app.pipeline.inference.is_alive()
+
+
+def test_camera_view_renders_face_and_detection_pipeline(qapp, tmp_path: Path, frames_dir: Path) -> None:
+    from src.detection import ear_calculator as ec
+    from src.detection.face_detector import Detection, FaceDetections
+    from src.main import App, parse_args
+    from src.ui.camera_view import render_detection_overlay
+
+    args = parse_args([
+        "--source", str(frames_dir), "--skip-intro", "--show-camera",
+        "--db", str(tmp_path / "cam.db"), "--source-fps", "60",
+    ])
+    app = App(qapp, FAST, args, model_factory=factory(closed_every=60))
+    app.start()
+    assert app.camera_view is not None and app.camera_view.isVisible()
+    assert wait_for(lambda: app.pipeline.inference.frames > 60)
+    for _ in range(4):
+        app.tick()
+        qapp.processEvents()
+        time.sleep(0.1)
+    assert wait_for(lambda: app.camera_view._last_df is not None)
+    df = app.camera_view._last_df
+    assert df is not None
+
+    # Exercise overlay rendering with full landmarks, YOLO boxes, and pose keypoints
+    pts = np.zeros((478, 2), dtype=np.float32)
+    pts[ec.NOSE_TIP] = (32, 24)
+    df.landmark = ec.measure(pts, 64, 48)
+    df.faces = FaceDetections({"mata_tertutup": 0.85, "mata_terbuka": 0.0, "menguap": 0.0, "kerutan_dahi": 0.0},
+                              [Detection("mata_tertutup", 0.85, (10, 10, 40, 25))])
+    df.pose = PoseResult(person_found=True, keypoints=np.ones((17, 3), dtype=np.float32) * 15, shoulder_slouch=0.6)
+    overlay_img = render_detection_overlay(df, CAL.ear_threshold, FAST)
+    assert overlay_img.shape == df.image.shape
+
+    app.camera_view.on_detection_frame(df)
+    assert app.camera_view.val_face.text() == "Terdeteksi"
+    assert "/" in app.camera_view.val_ear.text()
+    assert "dtk" in app.camera_view.val_win_span.text()
+
+    app.camera_view.close()
+    assert app.pipeline.frame_listener is None
+    app.shutdown()

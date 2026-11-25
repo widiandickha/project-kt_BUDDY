@@ -77,6 +77,7 @@ class LandmarkResult:
     face_size_ratio: float | None = None
     face_box: tuple[int, int, int, int] | None = None
     nose_xy: tuple[float, float] | None = None
+    landmarks: np.ndarray | None = None
 
 
 def measure(pts: np.ndarray, width: int, height: int) -> LandmarkResult:
@@ -95,6 +96,7 @@ def measure(pts: np.ndarray, width: int, height: int) -> LandmarkResult:
         face_size_ratio=float((x2 - x1) / max(width, 1)),
         face_box=(int(max(0, x1)), int(max(0, y1)), int(min(width - 1, x2)), int(min(height - 1, y2))),
         nose_xy=(float(nose[0] / max(width, 1)), float(nose[1] / max(height, 1))),
+        landmarks=pts,
     )
 
 

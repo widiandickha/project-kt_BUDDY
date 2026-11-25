@@ -30,6 +30,7 @@ class Tray(QObject):
     """Wraps QSystemTrayIcon; works (as a no-op) where no tray is available."""
 
     toggle_pause = Signal()
+    open_camera = Signal()
     open_dashboard = Signal()
     open_settings = Signal()
     recalibrate = Signal()
@@ -48,8 +49,8 @@ class Tray(QObject):
         self.menu.addAction(self.status_action)
         self.menu.addSeparator()
         self.menu.addAction(self.pause_action)
-        for text, sig in (("Buka dashboard", self.open_dashboard), ("Pengaturan", self.open_settings),
-                          ("Kalibrasi ulang", self.recalibrate)):
+        for text, sig in (("Lihat kamera & deteksi", self.open_camera), ("Buka dashboard", self.open_dashboard),
+                          ("Pengaturan", self.open_settings), ("Kalibrasi ulang", self.recalibrate)):
             act = QAction(text, self.menu)
             act.triggered.connect(sig.emit)
             self.menu.addAction(act)

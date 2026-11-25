@@ -16,7 +16,7 @@ from typing import Any
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import QDate, QRectF, Qt
+from PySide6.QtCore import QDate, QRectF, Qt, Signal, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -228,6 +228,8 @@ def _style_axes(ax) -> None:
 class Dashboard(QWidget):
     """Reads from the repository; call refresh() to recompute."""
 
+    open_camera = Signal()
+
     STATS: tuple[tuple[str, str, str], ...] = (
         ("work", "⏱️", "Waktu kerja"), ("peak", "📈", "Stres puncak"), ("breaks", "☕", "Istirahat ≥ 5 menit"),
         ("stretch", "⏳", "Kerja terlama tanpa jeda"), ("advice", "💬", "Saran diikuti"), ("yawn", "🥱", "Menguap"),
@@ -327,11 +329,15 @@ class Dashboard(QWidget):
         reload_.setObjectName("icon")
         reload_.setToolTip("Muat ulang")
         reload_.clicked.connect(self.refresh)
+        camera_btn = QPushButton("Lihat Kamera & Deteksi")
+        camera_btn.setObjectName("secondary")
+        camera_btn.clicked.connect(self.open_camera.emit)
         export = QPushButton("Ekspor CSV")
         export.clicked.connect(self.export_csv)
         for w in (prev, self.date_edit, nxt, today, reload_):
             head.addWidget(w)
         head.addSpacing(6)
+        head.addWidget(camera_btn)
         head.addWidget(export)
         return head
 

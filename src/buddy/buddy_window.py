@@ -19,6 +19,7 @@ from src.buddy.sprite_player import SpriteAnimator
 
 DRAG_THRESHOLD_PX = 4
 MENU_ACTIONS: tuple[tuple[str, str], ...] = (
+    ("camera", "Lihat kamera & deteksi"),
     ("pause", "Jeda 30 menit"),
     ("silence_today", "Diam hari ini"),
     ("dashboard", "Buka dashboard"),

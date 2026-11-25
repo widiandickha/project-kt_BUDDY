@@ -46,6 +46,21 @@ class Models:
     face: Any | None
 
 
+@dataclass
+class DetectionFrame:
+    """One processed frame with all intermediate detector outputs for live visualization (in memory only)."""
+
+    ts: float
+    image: Any
+    landmark: Any | None
+    faces: Any | None
+    pose: Any | None
+    features: FrameFeatures
+    fps: float
+    pose_every: int = 1
+    det_every: int = 1
+
+
 def default_models(cfg: dict[str, Any]) -> Models:
     """Create MediaPipe + pose (+ YOLO face when models/best.pt exists)."""
     from src.detection.ear_calculator import EarCalculator
@@ -67,11 +82,13 @@ class InferenceThread(threading.Thread):
 
     def __init__(self, cfg: dict[str, Any], capture: CaptureThread, extractor: FeatureExtractor,
                  on_features: Callable[[FrameFeatures], None],
-                 model_factory: Callable[[dict[str, Any]], Models] = default_models) -> None:
+                 model_factory: Callable[[dict[str, Any]], Models] = default_models,
+                 on_detection_frame: Callable[[DetectionFrame], None] | None = None) -> None:
         super().__init__(name="InferenceThread", daemon=True)
         rt = cfg["runtime"]
         self.cfg, self.capture, self.extractor = cfg, capture, extractor
         self.on_features = on_features
+        self.on_detection_frame = on_detection_frame
         self.model_factory = model_factory
         self.min_fps = float(rt["min_fps"])
         self.target_fps = float(cfg["inference"]["target_fps"])
@@ -137,11 +154,18 @@ class InferenceThread(threading.Thread):
                     pose_res = models.pose.process(frame.image)
                 if models.face is not None and (faces is None or self.frames % self.det_every == 0):
                     faces = models.face.predict(frame.image)
-                self.on_features(self.extractor.extract(time.time(), lm, faces, pose_res))
+                feat = self.extractor.extract(time.time(), lm, faces, pose_res)
+                self.on_features(feat)
                 now = time.monotonic()
                 inst = 1.0 / max(1e-3, now - last)
                 last = now
                 self.fps = inst if self.fps == 0 else (1 - FPS_EMA) * self.fps + FPS_EMA * inst
+                if self.on_detection_frame is not None:
+                    self.on_detection_frame(DetectionFrame(
+                        ts=feat.ts, image=frame.image, landmark=lm, faces=faces,
+                        pose=pose_res, features=feat, fps=self.fps,
+                        pose_every=self.pose_every, det_every=self.det_every,
+                    ))
                 if self.frames % 30 == 0:
                     self._adapt()
                 self.errors = 0
@@ -191,6 +215,7 @@ class Pipeline:
         self.log_every = float(cfg["storage"]["log_every_sec"])
         self.session_id: int | None = None
         self.feature_listener: Callable[[FrameFeatures], None] | None = None
+        self.frame_listener: Callable[[DetectionFrame], None] | None = None
         self.paused = False
         self.inference_paused = False
         self.watchdog_restarts = 0
@@ -203,7 +228,9 @@ class Pipeline:
         self._record_lock = threading.Lock()
 
     def _new_inference(self) -> InferenceThread:
-        return InferenceThread(self.cfg, self.capture, self.extractor, self._on_features, self.model_factory)
+        return InferenceThread(
+            self.cfg, self.capture, self.extractor, self._on_features, self.model_factory, self._on_detection_frame
+        )
 
     # -- lifecycle --------------------------------------------------------------------------
     def start(self) -> None:
@@ -267,6 +294,11 @@ class Pipeline:
             with self._record_lock:
                 if self._record is not None:
                     self._record.write(json.dumps(compact(f.to_dict()), separators=(",", ":")) + "\n")
+
+    def _on_detection_frame(self, df: DetectionFrame) -> None:
+        listener = self.frame_listener
+        if listener is not None:
+            listener(df)
 
     # -- per second (main thread) -------------------------------------------------------------
     def _watchdog(self) -> None:
