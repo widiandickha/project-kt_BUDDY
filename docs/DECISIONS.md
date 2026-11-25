@@ -278,6 +278,14 @@ Keputusan yang diambil saat spesifikasi ambigu atau saat kode menyimpang dari sp
   - Bobot skor tidak diubah.
 - **Akibat:** kerutan hanya terdeteksi setelah kalibrasi, karena butuh baseline `brow_ratio`. Metrik detektor untuk kelas ini ditulis "–". Keterbatasan ini dicatat di LAPORAN.md.
 
+### D-032 · Pratinjau kamera
+- **Keputusan:** jendela `src/ui/preview_window.py` bisa dibuka dari menu kucing, menu tray, atau `--preview`. Isinya:
+  - Frame terbaru beserta kotak YOLO (warna per kelas dan confidence), kotak landmark (wajah, mata, mulut), dan kerangka pose.
+  - Panel status indikator yang memakai aturan yang sama dengan skor: `eye_closed` dengan fusi EAR+YOLO, MAR, kerutan landmark (D-031), postur dan jarak terhadap kalibrasi, skor stres, dan FPS.
+- **Aliran data:** `InferenceThread.frame_listener` hanya diisi selama jendela terbuka (`Pipeline.set_preview_listener`), jadi saat tertutup tidak ada biaya tambahan. Frame diberikan apa adanya (tanpa inferensi tambahan). Jendela hanya menyimpan frame terbaru dan menggambarnya sekitar 15 Hz di thread utama.
+- **Privasi:** frame hanya ada di memori. Tidak ada tombol screenshot atau rekam. Selama jendela terbuka tampil label "LIVE · tidak disimpan". Saat ditutup, frame dibuang dan listener dilepas. Test memastikan tidak ada `imwrite` atau `QImage.save`.
+- **Kegunaan:** membantu pengguna memahami kenapa Buddy bereaksi, mengecek posisi kamera dan pencahayaan, dan dipakai untuk demo atau gambar Bab IV (pakai wajah sendiri).
+
 ## Catatan untuk FASE 2: dataset yang tersedia
 
 Tiga dataset Kaggle yang dimiliki tim:

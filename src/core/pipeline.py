@@ -38,6 +38,18 @@ RECOVER_FACTOR = 1.2
 
 
 @dataclass
+class PreviewFrame:
+    """One frame plus everything detected on it, handed to the live preview (memory only, D-032)."""
+
+    image: Any                    # BGR ndarray, never written to disk
+    features: FrameFeatures
+    landmark: Any | None = None   # LandmarkResult
+    faces: Any | None = None      # FaceDetections (None without models/best.pt)
+    pose: Any | None = None       # PoseResult
+    fps: float = 0.0
+
+
+@dataclass
 class Models:
     """Detectors used by the inference thread."""
 
@@ -114,6 +126,8 @@ class InferenceThread(threading.Thread):
             self.pose_every = max(1, self.pose_every - 1)
             self.det_every = max(1, self.det_every - 1)
 
+    frame_listener: Callable[[PreviewFrame], None] | None = None  # set only while the preview is open
+
     def run(self) -> None:
         """Inference loop."""
         models = self.model_factory(self.cfg)
@@ -137,7 +151,12 @@ class InferenceThread(threading.Thread):
                     pose_res = models.pose.process(frame.image)
                 if models.face is not None and (faces is None or self.frames % self.det_every == 0):
                     faces = models.face.predict(frame.image)
-                self.on_features(self.extractor.extract(time.time(), lm, faces, pose_res))
+                feats = self.extractor.extract(time.time(), lm, faces, pose_res)
+                self.on_features(feats)
+                listener = self.frame_listener
+                if listener is not None:
+                    listener(PreviewFrame(frame.image, feats, lm, faces if models.face is not None else None,
+                                          pose_res, self.fps))
                 now = time.monotonic()
                 inst = 1.0 / max(1e-3, now - last)
                 last = now
@@ -191,6 +210,7 @@ class Pipeline:
         self.log_every = float(cfg["storage"]["log_every_sec"])
         self.session_id: int | None = None
         self.feature_listener: Callable[[FrameFeatures], None] | None = None
+        self.preview_listener: Callable[[PreviewFrame], None] | None = None
         self.paused = False
         self.inference_paused = False
         self.watchdog_restarts = 0
@@ -203,7 +223,14 @@ class Pipeline:
         self._record_lock = threading.Lock()
 
     def _new_inference(self) -> InferenceThread:
-        return InferenceThread(self.cfg, self.capture, self.extractor, self._on_features, self.model_factory)
+        thread = InferenceThread(self.cfg, self.capture, self.extractor, self._on_features, self.model_factory)
+        thread.frame_listener = getattr(self, "preview_listener", None)
+        return thread
+
+    def set_preview_listener(self, listener: Callable[[PreviewFrame], None] | None) -> None:
+        """Hand frames + detections to the live preview; None stops it (no extra work when closed)."""
+        self.preview_listener = listener
+        self.inference.frame_listener = listener
 
     # -- lifecycle --------------------------------------------------------------------------
     def start(self) -> None:

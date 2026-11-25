@@ -31,6 +31,7 @@ class BuddyController(QObject):
     state_changed = Signal(str, str)       # previous, current
     pause_requested = Signal(int)          # minutes
     open_dashboard = Signal()
+    open_preview = Signal()
     open_settings = Signal()
     quit_requested = Signal()
     fullscreen_changed = Signal(bool)
@@ -121,6 +122,8 @@ class BuddyController(QObject):
             self.silence_today()
         elif key == "dashboard":
             self.open_dashboard.emit()
+        elif key == "preview":
+            self.open_preview.emit()
         elif key == "settings":
             self.open_settings.emit()
         elif key == "quit":

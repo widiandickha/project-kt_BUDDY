@@ -22,6 +22,7 @@ MENU_ACTIONS: tuple[tuple[str, str], ...] = (
     ("pause", "Jeda 30 menit"),
     ("silence_today", "Diam hari ini"),
     ("dashboard", "Buka dashboard"),
+    ("preview", "Pratinjau kamera"),
     ("settings", "Pengaturan"),
     ("quit", "Keluar"),
 )

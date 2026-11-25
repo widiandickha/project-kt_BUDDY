@@ -98,6 +98,7 @@ class App(QObject):
 
         self.tray = Tray(bool(cfg["privacy"]["show_camera_indicator"]))
         self.dashboard = None
+        self.preview = None
         self.wizard = None
         self._advice_ts: dict[str, float] = {}
         self._camera_lost = False
@@ -112,10 +113,12 @@ class App(QObject):
         b.pause_requested.connect(self.pause_for)
         b.fullscreen_changed.connect(self.on_fullscreen)
         b.open_dashboard.connect(self.show_dashboard)
+        b.open_preview.connect(self.show_preview)
         b.open_settings.connect(self.show_settings)
         b.quit_requested.connect(self.quit)
         self.tray.toggle_pause.connect(self.toggle_pause)
         self.tray.open_dashboard.connect(self.show_dashboard)
+        self.tray.open_preview.connect(self.show_preview)
         self.tray.open_settings.connect(self.show_settings)
         self.tray.recalibrate.connect(self.show_calibration)
         self.tray.quit_requested.connect(self.quit)
@@ -142,6 +145,8 @@ class App(QObject):
         self.midnight_timer.start(MIDNIGHT_CHECK_MS)
         if self.needs_calibration and not self.args.skip_intro:
             QTimer.singleShot(1500, self.show_calibration)
+        if getattr(self.args, "preview", False):
+            QTimer.singleShot(300, self.show_preview)
         if self.args.seconds:
             QTimer.singleShot(int(self.args.seconds * 1000), self.quit)
         # Models load inside the inference thread, so YOLO availability is logged there (default_models).
@@ -224,6 +229,19 @@ class App(QObject):
         self.dashboard.show()
         self.dashboard.raise_()
 
+    def show_preview(self) -> None:
+        """Open the live camera preview (frames stay in memory, D-032)."""
+        from src.ui.preview_window import PreviewWindow
+
+        if self.preview is None:
+            eng = self.pipeline.engine
+            self.preview = PreviewWindow(self.cfg, lambda: eng.calibration, lambda: eng.last_snapshot,
+                                         lambda: self.pipeline.camera_active)
+            self.preview.closed.connect(lambda: self.pipeline.set_preview_listener(None))
+        self.pipeline.set_preview_listener(self.preview.push)
+        self.preview.show()
+        self.preview.raise_()
+
     def show_settings(self) -> None:
         """Open the settings dialog."""
         from src.ui.settings_dialog import SettingsDialog
@@ -287,6 +305,7 @@ class App(QObject):
         self._quitting = True
         self.tick_timer.stop()
         self.midnight_timer.stop()
+        self.pipeline.set_preview_listener(None)
         self.pipeline.stop()
         self.repo.flush()
         try:
@@ -311,6 +330,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--db", default=None, help="path database alternatif")
     ap.add_argument("--seconds", type=float, default=None, help="keluar otomatis setelah N detik")
     ap.add_argument("--skip-intro", action="store_true", help="tanpa dialog disclaimer & wizard kalibrasi")
+    ap.add_argument("--preview", action="store_true", help="buka pratinjau kamera saat mulai")
     return ap.parse_args(argv)
 
 

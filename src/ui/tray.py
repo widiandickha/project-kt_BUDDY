@@ -31,6 +31,7 @@ class Tray(QObject):
 
     toggle_pause = Signal()
     open_dashboard = Signal()
+    open_preview = Signal()
     open_settings = Signal()
     recalibrate = Signal()
     quit_requested = Signal()
@@ -48,7 +49,8 @@ class Tray(QObject):
         self.menu.addAction(self.status_action)
         self.menu.addSeparator()
         self.menu.addAction(self.pause_action)
-        for text, sig in (("Buka dashboard", self.open_dashboard), ("Pengaturan", self.open_settings),
+        for text, sig in (("Buka dashboard", self.open_dashboard), ("Pratinjau kamera", self.open_preview),
+                          ("Pengaturan", self.open_settings),
                           ("Kalibrasi ulang", self.recalibrate)):
             act = QAction(text, self.menu)
             act.triggered.connect(sig.emit)

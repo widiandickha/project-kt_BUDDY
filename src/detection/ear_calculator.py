@@ -26,6 +26,7 @@ INNER_BROWS: tuple[int, int] = (107, 336)
 BROW_EYELID_LEFT: tuple[int, int] = (295, 386)
 BROW_EYELID_RIGHT: tuple[int, int] = (65, 159)
 NOSE_TIP: int = 1
+MOUTH_OUTLINE: tuple[int, ...] = (61, 291, 0, 17, 13, 14, 78, 308)
 
 LANDMARKER_URL = (
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
@@ -77,6 +78,17 @@ class LandmarkResult:
     face_size_ratio: float | None = None
     face_box: tuple[int, int, int, int] | None = None
     nose_xy: tuple[float, float] | None = None
+    eye_box: tuple[int, int, int, int] | None = None    # both eyes (preview only)
+    mouth_box: tuple[int, int, int, int] | None = None  # lips (preview only)
+
+
+def _box(pts: np.ndarray, idx: tuple[int, ...], pad: float, width: int, height: int) -> tuple[int, int, int, int]:
+    """Padded pixel box around a landmark subset, clipped to the frame."""
+    sub = pts[list(idx)]
+    x1, y1 = sub.min(axis=0)
+    x2, y2 = sub.max(axis=0)
+    px, py = (x2 - x1) * pad, (y2 - y1) * pad + 2
+    return (int(max(0, x1 - px)), int(max(0, y1 - py)), int(min(width - 1, x2 + px)), int(min(height - 1, y2 + py)))
 
 
 def measure(pts: np.ndarray, width: int, height: int) -> LandmarkResult:
@@ -95,6 +107,8 @@ def measure(pts: np.ndarray, width: int, height: int) -> LandmarkResult:
         face_size_ratio=float((x2 - x1) / max(width, 1)),
         face_box=(int(max(0, x1)), int(max(0, y1)), int(min(width - 1, x2)), int(min(height - 1, y2))),
         nose_xy=(float(nose[0] / max(width, 1)), float(nose[1] / max(height, 1))),
+        eye_box=_box(pts, LEFT_EYE + RIGHT_EYE, 0.12, width, height),
+        mouth_box=_box(pts, MOUTH_OUTLINE, 0.15, width, height),
     )
 
 
