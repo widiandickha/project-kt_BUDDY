@@ -513,6 +513,10 @@ class Dashboard(QWidget):
         sprite, sentence = buddy_message(t)
         self.hero_text.setText(sentence)
         summary_body, tips = daily_conclusion(t, self.cfg)
+        s_day, e_day = ds.day_bounds(day)
+        quests_done = len(self.repo.events_between(s_day, e_day, ["quest_done"]))
+        if quests_done > 0:
+            tips = [f"🎯 {quests_done}× Quest selesai hari ini"] + tips[:2]
         self.conclusion_text.setText(summary_body)
         self._set_tip_pills(tips)
 

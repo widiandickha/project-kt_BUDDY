@@ -3,8 +3,8 @@
 Frameless, always on top, Qt.Tool (no taskbar entry), never takes focus, translucent.
 Sits at the bottom edge of QScreen.availableGeometry() (above the taskbar) on the configured
 monitor, right or center. Clicks on transparent pixels pass through (setMask from the sprite
-alpha, refreshed <= buddy.mask_hz). Left click = react, right click = styled menu, drag = move
-along the bottom edge.
+alpha, refreshed <= buddy.mask_hz). Left click = react, right click = styled menu (with
+interactive Quests submenu), drag = move along the bottom edge.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QBitmap, QGuiApplication, QPainter, QRegion
 from PySide6.QtWidgets import QMenu, QWidget
 
+from src.buddy.quests import QUESTS, format_mmss
 from src.buddy.sprite_player import SpriteAnimator
 from src.ui import theme
 
@@ -126,11 +127,19 @@ class BuddyWindow(QWidget):
         self._press, self._dragging = None, False
 
     def contextMenuEvent(self, event) -> None:  # noqa: N802 (Qt API)
-        """Modern styled right-click menu with section separators."""
+        """Modern styled right-click menu with interactive Quests submenu."""
         menu = QMenu(self)
         menu.setStyleSheet(theme.MENU_STYLESHEET)
         header = menu.addAction("🐾  Stress Buddy")
         header.setEnabled(False)
+        menu.addSeparator()
+
+        quest_menu = menu.addMenu("🎯  Mulai Quest Interaktif")
+        quest_menu.setStyleSheet(theme.MENU_STYLESHEET)
+        for q in QUESTS.values():
+            act = quest_menu.addAction(f"{q.icon}  {q.title} ({format_mmss(q.duration_sec)})")
+            act.triggered.connect(lambda _=False, qid=q.id: self.menu_action.emit(f"quest:{qid}"))
+
         menu.addSeparator()
         for key, label in MENU_ACTIONS:
             if key in ("pause", "settings", "quit"):

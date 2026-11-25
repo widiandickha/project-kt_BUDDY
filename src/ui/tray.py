@@ -10,6 +10,7 @@ from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 from src.buddy.procedural import make_pixmap
+from src.buddy.quests import QUESTS, format_mmss
 from src.ui import theme
 
 ICON_PX = 64
@@ -42,6 +43,7 @@ class Tray(QObject):
     open_preview = Signal()
     open_settings = Signal()
     recalibrate = Signal()
+    start_quest = Signal(str)
     quit_requested = Signal()
 
     def __init__(self, show_indicator: bool = True) -> None:
@@ -56,6 +58,13 @@ class Tray(QObject):
         self.pause_action = QAction("⏸️  Jeda Kamera")
         self.pause_action.triggered.connect(self.toggle_pause.emit)
         self.menu.addAction(self.status_action)
+        self.menu.addSeparator()
+        quest_menu = self.menu.addMenu("🎯  Mulai Quest Interaktif")
+        quest_menu.setStyleSheet(theme.MENU_STYLESHEET)
+        for q in QUESTS.values():
+            q_act = QAction(f"{q.icon}  {q.title} ({format_mmss(q.duration_sec)})", quest_menu)
+            q_act.triggered.connect(lambda _=False, qid=q.id: self.start_quest.emit(qid))
+            quest_menu.addAction(q_act)
         self.menu.addSeparator()
         for text, sig in (
             ("📊  Buka Dashboard", self.open_dashboard),
@@ -74,7 +83,7 @@ class Tray(QObject):
             act.triggered.connect(sig.emit)
             self.menu.addAction(act)
         self.menu.addSeparator()
-        quit_act = QAction("🚪  Keluar", self.menu)
+        quit_act = QAction("Keluar", self.menu)
         quit_act.triggered.connect(self.quit_requested.emit)
         self.menu.addAction(quit_act)
         self.icon.setContextMenu(self.menu)

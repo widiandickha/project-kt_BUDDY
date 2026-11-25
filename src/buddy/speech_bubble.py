@@ -1,7 +1,7 @@
-"""Speech bubble above the cat's head (spec 5.5).
+"""Speech bubble above the cat's head (spec 5.5 + interactive Quest button).
 
 Fades/scales in over 200 ms, hides itself after buddy.bubble_sec (response "diabaikan") or
-when clicked ("ditutup"). Optional buttons: Oke, Nanti (snooze), Jangan hari ini.
+when clicked ("ditutup"). Optional buttons: Quest button / Oke, Nanti (snooze), Jangan hari ini.
 Never takes keyboard focus away from the user's work.
 """
 
@@ -11,10 +11,11 @@ from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, QRec
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from src.buddy.quests import quest_for_advice
 from src.ui import theme
 
 ANIM_MS = 200
-WIDTH = 284
+WIDTH = 296
 TAIL = 10
 RADIUS = 14
 BG = QColor("#FFFDF9")
@@ -89,6 +90,9 @@ class SpeechBubble(QWidget):
             self.responded.emit(self.key, "diabaikan")
         self.key = key
         self._label.setText(text)
+        quest = quest_for_advice(key)
+        if self._button_widgets:
+            self._button_widgets[0].setText(quest.button_label if quest is not None else "✓ Oke")
         for b in self._button_widgets:
             b.setVisible(with_buttons)
         self.adjustSize()

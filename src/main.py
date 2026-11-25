@@ -110,6 +110,7 @@ class App(QObject):
         b = self.buddy
         b.advice_shown.connect(self.on_advice_shown)
         b.advice_response.connect(self.on_advice_response)
+        b.quest_completed.connect(self.on_quest_completed)
         b.pause_requested.connect(self.pause_for)
         b.fullscreen_changed.connect(self.on_fullscreen)
         b.open_dashboard.connect(self.show_dashboard)
@@ -121,6 +122,7 @@ class App(QObject):
         self.tray.open_preview.connect(self.show_preview)
         self.tray.open_settings.connect(self.show_settings)
         self.tray.recalibrate.connect(self.show_calibration)
+        self.tray.start_quest.connect(self.buddy.start_quest)
         self.tray.quit_requested.connect(self.quit)
         self.qapp.aboutToQuit.connect(self.shutdown)
 
@@ -216,6 +218,13 @@ class App(QObject):
         ts = self._advice_ts.pop(key, None)
         if ts is not None:
             self.repo.set_advice_response(ts, key, response)
+
+    def on_quest_completed(self, quest: Any) -> None:
+        """Log a finished interactive Quest and notify via system tray."""
+        now = time.time()
+        self.repo.add_event(now, self.pipeline.session_id, "quest_done", 1,
+                            {"quest_id": quest.id, "title": quest.title, "duration_sec": quest.duration_sec})
+        self.tray.notify(f"Quest Selesai: {quest.title}", quest.done_text)
 
     # -- windows -------------------------------------------------------------------------------
     def show_dashboard(self) -> None:

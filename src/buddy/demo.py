@@ -31,6 +31,7 @@ from src.buddy.advice_engine import AdviceEngine
 from src.buddy.buddy_state import BuddyState
 from src.buddy.controller import BuddyController
 from src.buddy.event_mapper import SEVERITY
+from src.buddy.quests import QUESTS
 from src.buddy.sprite_player import SpriteAnimator
 from src.core.config import load_config
 from src.core.events import BuddyEvent
@@ -70,6 +71,14 @@ class DebugPanel(QWidget):
             b.clicked.connect(lambda _=False, k=kind: self.fire(k))
             grid2.addWidget(b, i // 3, i % 3)
         lay.addWidget(ev_box)
+
+        q_box = QGroupBox("Quest Interaktif (Timer + Notifikasi)")
+        grid3 = QGridLayout(q_box)
+        for i, q in enumerate(QUESTS.values()):
+            b = QPushButton(f"{q.icon} {q.title}")
+            b.clicked.connect(lambda _=False, qid=q.id: self.c.start_quest(qid))
+            grid3.addWidget(b, i // 2, i % 2)
+        lay.addWidget(q_box)
 
         self.ignore_cd = QCheckBox("Abaikan cooldown saran (debug)")
         self.ignore_cd.setChecked(True)

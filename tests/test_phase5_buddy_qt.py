@@ -154,3 +154,48 @@ def test_click_reacts(qapp) -> None:
     c.on_click()
     assert c.machine.state == BuddyState.HAPPY and c.bubble.key == "click"
     c.close()
+
+
+def test_interactive_quests_countdown_and_completion(qapp) -> None:
+    from src.buddy.quests import QUESTS, format_mmss
+
+    assert format_mmss(300) == "05:00" and format_mmss(45) == "00:45"
+    c = BuddyController(CFG, poll_fullscreen=False)
+    started: list[str] = []
+    completed: list[str] = []
+    c.quest_started.connect(lambda q: started.append(q.id))
+    c.quest_completed.connect(lambda q: completed.append(q.id))
+
+    # 1. Start the 5-minute sleep quest via menu action
+    c.on_menu("quest:nap_5m")
+    assert started == ["nap_5m"]
+    assert c.active_quest == QUESTS["nap_5m"]
+    assert c.quest_banner.isVisible()
+    assert c.quest_banner.time_lbl.text() == "05:00"
+    assert c.machine.state == BuddyState.SLEEPING
+
+    # Tick down 1 second
+    c.quest_banner._on_tick()
+    assert c.quest_banner.remaining_sec == 299
+    assert c.quest_banner.time_lbl.text() == "04:59"
+
+    # Simulate countdown reaching 0 -> completion notification & celebration
+    c.quest_banner.remaining_sec = 1
+    c.quest_banner._on_tick()
+    assert completed == ["nap_5m"]
+    assert c.active_quest is None and not c.quest_banner.isVisible()
+    assert c.machine.state == BuddyState.CELEBRATE
+    assert c.bubble.isVisible() and c.bubble.key == "quest_done"
+    assert "5 menit selesai" in c.bubble._label.text()
+
+    # 2. Start drink_water quest from sleepy advice bubble response ("oke")
+    adv = c.handle_event(BuddyEvent("sleepy", 2, "sleepy", time.time()))
+    assert adv is not None and "Minum Air" in c.bubble._button_widgets[0].text()
+    c.bubble._finish("oke")
+    assert c.active_quest == QUESTS["drink_water"]
+    assert c.quest_banner.time_lbl.text() == "00:45"
+
+    # Cancel active quest
+    c.quest_banner.cancel()
+    assert c.active_quest is None and c.machine.state == BuddyState.IDLE
+    c.close()
